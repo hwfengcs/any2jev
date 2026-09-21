@@ -106,6 +106,7 @@ any2jev serve hf://huaweifeng/any2jev-qwen3-0.6b --port 8009
 |---|---|---|---|---|
 | [`huaweifeng/any2jev-qwen3-0.6b`](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b) | Qwen3-0.6B | boolq, ag_news, banking77, sst5 (5.4k records) | acc 0.796 · ECE 0.027 | the model behind every number on this page |
 | [`huaweifeng/any2jev-qwen3-0.6b-snake`](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b-snake) | Qwen3-0.6B | 4k BFS-teacher Snake moves | acc 0.953 | drives `examples/snake.py` |
+| [`huaweifeng/any2jev-qwen3.5-0.8b-synthetic`](https://huggingface.co/huaweifeng/any2jev-qwen3.5-0.8b-synthetic) | Qwen3.5-0.8B (hybrid) | 1.6k synthetic tickets | acc 0.997 | proves the rows-mode recipe on a linear-attention backbone; not a general model |
 
 Each repo is ~40 MB (LoRA adapter + pointer head + tokenizer + config); the base weights download from
 their own Hub repo on first use.
@@ -223,7 +224,13 @@ sequence length matches.
 | base | architecture | mode | trained on | acc | ECE | train time | trainable params |
 |---|---|---|---|---|---|---|---|
 | Qwen/Qwen3-0.6B | attention-only | packed | public (1000 q) | 0.796 | 0.027 | 61 min | 10.6 M |
+| Qwen/Qwen3.5-0.8B | hybrid (linear attention + attention) | rows | synthetic (594 q) | 0.997 | 0.003 | 26 min | 5.9 M |
 <!-- /RESULTS:BASES -->
+
+The Qwen3.5 row is the synthetic smoke test, not a benchmark: it shows the hybrid (Gated DeltaNet) backbone goes
+through the same surgery, training and serving path, with every question run as its own causal row because
+linear-attention layers cannot take the block-causal mask. Rows mode costs about 6x the packed latency on this
+GPU (259 ms for the 3-question example, without the fused kernels from `flash-linear-attention`).
 
 Anything `AutoModelForCausalLM` loads should work. Delimiter reuse is built in for Qwen, Llama 3 and Gemma
 tokenizers; other tokenizers get five new tokens. Rough VRAM for fp32 LoRA training with 384-token states:

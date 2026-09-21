@@ -105,6 +105,7 @@ any2jev serve hf://huaweifeng/any2jev-qwen3-0.6b --port 8009
 |---|---|---|---|---|
 | [`huaweifeng/any2jev-qwen3-0.6b`](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b) | Qwen3-0.6B | boolq、ag_news、banking77、sst5（5400 条） | acc 0.796 · ECE 0.027 | 本页所有数字背后的模型 |
 | [`huaweifeng/any2jev-qwen3-0.6b-snake`](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b-snake) | Qwen3-0.6B | 4000 步 BFS 老师走法 | acc 0.953 | 驱动 `examples/snake.py` |
+| [`huaweifeng/any2jev-qwen3.5-0.8b-synthetic`](https://huggingface.co/huaweifeng/any2jev-qwen3.5-0.8b-synthetic) | Qwen3.5-0.8B（混合架构） | 1600 条合成工单 | acc 0.997 | 验证线性注意力基座上的 rows 模式配方；不是通用模型 |
 
 每个仓库约 40 MB（LoRA adapter + pointer head + tokenizer + 配置）；基座权重首次使用时从它自己的 Hub 仓库下载。
 训练数据是英文的，中文输入请用自己的数据重新训练。
@@ -219,7 +220,12 @@ RTX 2060 SUPER（Turing）没有原生 bf16，所以 fp32 反而更快；Ampere 
 | 基座 | 架构 | 模式 | 训练数据 | acc | ECE | 训练耗时 | 可训练参数 |
 |---|---|---|---|---|---|---|---|
 | Qwen/Qwen3-0.6B | 纯注意力 | packed | public (1000 q) | 0.796 | 0.027 | 61 min | 10.6 M |
+| Qwen/Qwen3.5-0.8B | 混合（线性注意力 + 注意力） | rows | synthetic (594 q) | 0.997 | 0.003 | 26 min | 5.9 M |
 <!-- /RESULTS:BASES -->
+
+Qwen3.5 那一行是合成数据的冒烟测试，不是 benchmark：它证明混合架构（Gated DeltaNet）基座能走通同一套手术、训练和服务路径，
+只是每个问题作为独立的因果序列运行，因为线性注意力层吃不了块因果 mask。rows 模式在这张卡上的延迟约为打包模式的 6 倍
+（3 个问题的示例 259 ms，未安装 `flash-linear-attention` 的融合算子）。
 
 `AutoModelForCausalLM` 能加载的都应该能用。Qwen、Llama 3、Gemma 的 tokenizer 内置了分隔符复用方案，其他 tokenizer
 会新增五个 token。fp32 LoRA 训练、384 token state 的显存粗估：0.6B 约 8 GB，1.7B 约 16 GB（`--dtype bf16` 减半）。
