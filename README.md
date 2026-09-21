@@ -114,6 +114,7 @@ their own Hub repo on first use.
 
 ```bash
 pip install "any2jev[serve]"            # + [data] for public datasets, [compat] for the TypeSafe SDK
+# or straight from GitHub:  pip install "any2jev[serve] @ git+https://github.com/hwfengcs/any2jev"
 
 # 1. data: 2,000 synthetic support tickets (no download), or convert public datasets
 any2jev data synthetic --out data/synthetic --n 2000

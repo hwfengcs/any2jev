@@ -113,6 +113,7 @@ any2jev serve hf://huaweifeng/any2jev-qwen3-0.6b --port 8009
 
 ```bash
 pip install "any2jev[serve]"            # 公开数据集加 [data]，官方 SDK 加 [compat]
+# 或者直接装 GitHub 上的版本：  pip install "any2jev[serve] @ git+https://github.com/hwfengcs/any2jev"
 
 # 1. 数据：2000 条合成客服工单（无需下载），或转换公开数据集
 any2jev data synthetic --out data/synthetic --n 2000

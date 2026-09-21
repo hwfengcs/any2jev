@@ -32,3 +32,4 @@ huggingface_key.txt
 PyPI-Recovery-Codes-*.txt
 *token*.txt
 *.key
+pypi_token.txt
