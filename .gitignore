@@ -22,3 +22,6 @@ wandb/
 Thumbs.db
 runs/
 data/
+dist/
+docs/*.gif
+!docs/snake.gif
