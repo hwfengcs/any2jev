@@ -25,3 +25,30 @@ Ground rules:
 * GPU-hours per million requests is `latency_ms × 1e6 / 3.6e6`, serial, single request. Batching lowers it for
   every method; the ratio between methods is what matters.
 * The cloud row is intentionally empty. Publishing a latency for a service we did not measure would be a guess.
+
+## Inference optimization check, 2026-09-21
+
+The existing Qwen3-0.6B public checkpoint, fp32, RTX 2060 SUPER, 116 tokens and 3 questions.
+`examples/bench_latency.py` warms up 5 times, then measures 60 requests per variant:
+
+| variant | p50 ms | p95 ms | peak allocated MiB |
+|---|---:|---:|---:|
+| default (unused KV cache disabled) | 40.4 | 46.2 | 2918.4 |
+| `--merge` | 31.3 | 32.3 | 2291.5 |
+
+Reproduce with the following commands; the recorded Windows runs used 4 CPU threads
+(`OMP_NUM_THREADS=4`, `MKL_NUM_THREADS=4`):
+
+```bash
+python examples/bench_latency.py runs/qwen3-0.6b-public --n 60
+python examples/bench_latency.py runs/qwen3-0.6b-public --n 60 --merge
+```
+
+Merging changed no highest-probability option on the 1,000-question public test set; maximum probability
+difference was 7.09e-6. Accuracy remained 0.796 and ECE 0.027014. The checkpoint files were unchanged.
+[Measurement summary and checksums](experiments/2026-09-21.json) and
+[the investigation notes](exploration-2026-09-21.md) record the scope and other correctness checks.
+
+The original comparison table retains its historical reports. Adaptive ECE and selective metrics now
+handle confidence ties correctly; rerunning older baselines can therefore change those metrics even
+when the model's predictions are unchanged.

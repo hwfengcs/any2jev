@@ -1,0 +1,99 @@
+{
+  "date": "2026-09-21",
+  "platform": "Windows, NVIDIA GeForce RTX 2060 SUPER (8 GiB)",
+  "versions": {
+    "torch": "2.9.0+cu126",
+    "transformers": "5.5.0",
+    "peft": "0.18.1",
+    "numpy": "2.3.3"
+  },
+  "tests_latest": 84,
+  "tests_minimum": 84,
+  "minimum_model_dependencies": {
+    "transformers": "4.51.3",
+    "peft": "0.14.0"
+  },
+  "build": "sdist and wheel passed twine check",
+  "latency": {
+    "warmup_requests": 5,
+    "threads": 4,
+    "requests_per_variant": 60,
+    "results": [
+      {
+        "model": "runs/qwen3-0.6b-public",
+        "base": "Qwen/Qwen3-0.6B",
+        "dtype": "torch.float32",
+        "device": "cuda:0",
+        "mode": "packed",
+        "input_tokens": 116,
+        "merged": false,
+        "samples": 60,
+        "peak_memory_mib": 2918.4,
+        "questions": 3,
+        "p50_ms": 40.4,
+        "p95_ms": 46.2,
+        "min_ms": 38.7
+      },
+      {
+        "model": "runs/qwen3-0.6b-public",
+        "base": "Qwen/Qwen3-0.6B",
+        "dtype": "torch.float32",
+        "device": "cuda:0",
+        "mode": "packed",
+        "input_tokens": 116,
+        "merged": true,
+        "samples": 60,
+        "peak_memory_mib": 2291.5,
+        "questions": 3,
+        "p50_ms": 31.3,
+        "p95_ms": 32.3,
+        "min_ms": 30.9
+      }
+    ]
+  },
+  "public_regression": {
+    "records": 1000,
+    "merge_max_prob_diff": 7.090590624647675e-06,
+    "merge_changed_argmax": 0,
+    "multiquestion_isolation": {
+      "n": 18,
+      "max_abs_prob_diff": 3.2782554626464844e-06
+    },
+    "metrics": {
+      "n": 1000,
+      "accuracy": 0.796,
+      "nll": 0.5055501769514382,
+      "brier": 0.2843238020076048,
+      "ece": 0.027014436774494957,
+      "ece_adaptive": 0.023382643550049865,
+      "aurc": 0.061860560884708864,
+      "coverage_at_5pct_risk": 0.572,
+      "mean_confidence": 0.7758447378830231
+    },
+    "merged_metrics": {
+      "n": 1000,
+      "accuracy": 0.796,
+      "nll": 0.5055502237715733,
+      "brier": 0.28432383468474015,
+      "ece": 0.02701443613818323,
+      "ece_adaptive": 0.02338263059295619,
+      "aurc": 0.061860560884708864,
+      "coverage_at_5pct_risk": 0.572,
+      "mean_confidence": 0.775844748368945
+    }
+  },
+  "hybrid_parity": {
+    "base": "Qwen/Qwen3.5-0.8B",
+    "mode": "rows",
+    "records": 12,
+    "cache_max_prob_diff": 0.0,
+    "merge_max_prob_diff": 1.1911036946760945e-43,
+    "isolation_max_prob_diff": 2.5223372357846707e-44
+  },
+  "sha256": {
+    "runs/qwen3-0.6b-public/any2jev.json": "e4e26dab7166bd821459dee29b419ec0f7fc89d559e5bfd8617b827746cd1176",
+    "runs/qwen3-0.6b-public/head.safetensors": "2c1d6da848e69beaaaf6a186ae3097b39e915abe7c720d45b479394be9cf4cb6",
+    "runs/qwen3-0.6b-public/adapter/adapter_model.safetensors": "3b915814796713c94381bee0b51e00af399f5c9fee6c5a622dc5ab61b05da29e",
+    "data/public/test.jsonl": "1bae1e0e63848a8d8a995fddac5745730c3f7d61c67852c52c1313765fd304aa"
+  }
+}

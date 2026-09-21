@@ -114,6 +114,9 @@ any2jev serve hf://huaweifeng/any2jev-qwen3-0.6b --port 8009
 Each repo is ~40 MB (LoRA adapter + pointer head + tokenizer + config); the base weights download from
 their own Hub repo on first use.
 
+For faster inference, add `--merge` to `ask` or `serve`. On the measured 116-token request,
+merging reduced median latency from 40.4 to 31.3 ms; see [measurement details](docs/benchmarks.md#inference-optimization-check-2026-09-21).
+
 ## Quick start
 
 ```bash

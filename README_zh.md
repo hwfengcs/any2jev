@@ -113,6 +113,9 @@ any2jev serve hf://huaweifeng/any2jev-qwen3-0.6b --port 8009
 每个仓库约 40 MB（LoRA adapter + pointer head + tokenizer + 配置）；基座权重首次使用时从它自己的 Hub 仓库下载。
 训练数据是英文的，中文输入请用自己的数据重新训练。
 
+推理时可给 `ask` 或 `serve` 加上 `--merge`。实测的 116-token 请求中，合并后延迟中位数从
+40.4 降至 31.3 ms，详见[测量记录](docs/benchmarks.md#inference-optimization-check-2026-09-21)。
+
 ## 快速开始
 
 ```bash
