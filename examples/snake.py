@@ -177,7 +177,9 @@ def main():
         game.step(a_move["choice"])
         probs = " ".join(f"{k}:{v:.2f}" for k, v in a_move["probabilities"].items())
         frame = f"{game.render()}\nscore {game.score}  step {game.steps}  {latencies[-1]:.0f} ms   {probs}"
-        frames.append(frame)
+        frames.append({"body": list(game.body), "food": game.food, "w": game.w, "h": game.h, "score": game.score,
+                       "step": game.steps, "ms": latencies[-1], "probs": dict(a_move["probabilities"]),
+                       "choice": a_move["choice"], "alive": game.alive})
         sys.stdout.write("\x1b[2J\x1b[H" + frame + "\n")
         sys.stdout.flush()
         time.sleep(a.delay)
@@ -187,19 +189,51 @@ def main():
         print(f"wrote {a.gif}")
 
 
-def _save_gif(frames, path):
+def _save_gif(frames, path, cell=26, header=54, footer=70):
+    """Render frames as a compact colour GIF: board, score line, and a probability bar per legal move."""
     from PIL import Image, ImageDraw, ImageFont
 
-    font = ImageFont.load_default()
+    def font(size):
+        for name in ("DejaVuSansMono.ttf", "consola.ttf", "cour.ttf", "Menlo.ttc"):
+            try:
+                return ImageFont.truetype(name, size)
+            except OSError:
+                continue
+        return ImageFont.load_default()
+
+    f_big, f_small = font(18), font(14)
+    bg, grid, snake, head, food, txt, dim = "#0f1117", "#1b1f2a", "#3ddc84", "#a8ffcf", "#ff5c5c", "#e6e6e6", "#8a8f9c"
+    bar_bg, bar_fg, bar_pick = "#262b38", "#5b8def", "#3ddc84"
+    w, h = frames[0]["w"], frames[0]["h"]
+    W, H = w * cell + 20, header + h * cell + footer
     imgs = []
-    for f in frames:
-        lines = f.split("\n")
-        img = Image.new("RGB", (max(len(line) for line in lines) * 7 + 20, len(lines) * 13 + 20), "black")
+    for fr in frames:
+        img = Image.new("RGB", (W, H), bg)
         d = ImageDraw.Draw(img)
-        for i, line in enumerate(lines):
-            d.text((10, 10 + 13 * i), line, fill="white", font=font)
+        d.text((10, 8), "any2jev · Qwen3-0.6B plays Snake", fill=txt, font=f_big)
+        d.text((10, 32), f"score {fr['score']}   step {fr['step']}   {fr['ms']:.0f} ms / decision   one Choice question per tick",
+               fill=dim, font=f_small)
+        ox, oy = 10, header
+        for y in range(h):
+            for x in range(w):
+                d.rectangle([ox + x * cell, oy + y * cell, ox + (x + 1) * cell - 2, oy + (y + 1) * cell - 2], fill=grid)
+        for i, (x, y) in enumerate(fr["body"]):
+            d.rectangle([ox + x * cell, oy + y * cell, ox + (x + 1) * cell - 2, oy + (y + 1) * cell - 2],
+                        fill=head if i == 0 else snake)
+        fx, fy = fr["food"]
+        d.ellipse([ox + fx * cell + 4, oy + fy * cell + 4, ox + (fx + 1) * cell - 6, oy + (fy + 1) * cell - 6], fill=food)
+        by = oy + h * cell + 10
+        for k, (name, p) in enumerate(fr["probs"].items()):
+            x0 = 10 + k * (W - 20) // 4
+            d.text((x0, by), f"{name} {p:.2f}", fill=txt if name == fr["choice"] else dim, font=f_small)
+            d.rectangle([x0, by + 20, x0 + (W - 20) // 4 - 12, by + 30], fill=bar_bg)
+            d.rectangle([x0, by + 20, x0 + int(((W - 20) // 4 - 12) * p), by + 30],
+                        fill=bar_pick if name == fr["choice"] else bar_fg)
+        if not fr["alive"]:
+            d.text((10, by + 40), "game over", fill=food, font=f_small)
         imgs.append(img)
-    imgs[0].save(path, save_all=True, append_images=imgs[1:], duration=120, loop=0)
+    imgs += [imgs[-1]] * 12  # hold the last frame
+    imgs[0].save(path, save_all=True, append_images=imgs[1:], duration=110, loop=0, optimize=True)
 
 
 if __name__ == "__main__":

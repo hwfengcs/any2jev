@@ -113,7 +113,24 @@ Qwen3-0.6B, LoRA r=16, one epoch, one RTX 2060 SUPER (8 GB). Held-out test split
 on validation. `any2jev eval` prints these tables; the JSON reports are in `runs/`.
 
 <!-- RESULTS:PUBLIC -->
-_(public-data run in progress; numbers land here)_
+| question type | n | system | acc | NLL | Brier | ECE | AURC | cov@5% |
+|---|---|---|---|---|---|---|---|---|
+| overall | 1000 | zero-shot logits (base) | 0.531 | 1.180 | 0.595 | 0.111 | 0.276 | 0.05 |
+| overall | 1000 | zero-shot + temperature | 0.531 | 1.125 | 0.579 | 0.058 | 0.279 | 0.05 |
+| overall | 1000 | **any2jev** | **0.796** | **0.506** | **0.284** | **0.027** | **0.062** | **0.57** |
+| noul | 250 | zero-shot logits (base) | 0.644 | 0.693 | 0.479 | 0.166 | 0.216 | 0.12 |
+| noul | 250 | zero-shot + temperature | 0.644 | 0.631 | 0.443 | 0.119 | 0.216 | 0.12 |
+| noul | 250 | **any2jev** | **0.844** | **0.386** | **0.242** | **0.090** | **0.058** | **0.58** |
+| choice | 500 | zero-shot logits (base) | 0.622 | 1.163 | 0.534 | 0.082 | 0.222 | 0.09 |
+| choice | 500 | zero-shot + temperature | 0.622 | 1.118 | 0.532 | 0.087 | 0.226 | 0.09 |
+| choice | 500 | **any2jev** | **0.906** | **0.272** | **0.142** | **0.020** | **0.018** | **0.88** |
+| score | 250 | zero-shot logits (base) | 0.236 | 1.700 | 0.835 | 0.145 | 0.710 | 0.00 |
+| score | 250 | zero-shot + temperature | 0.236 | 1.634 | 0.811 | 0.092 | 0.705 | 0.00 |
+| score | 250 | **any2jev** | **0.528** | **1.093** | **0.611** | **0.056** | **0.424** | **0.01** |
+
+Option-order test on 23 Choice questions: argmax stable in 96% of them, mean max probability spread 0.088.
+Isolation check: packed vs. separate answers differ by at most 0.0e+00.
+Temperature fitted on validation: T = 1.61. Test set: 1000 records, 1000 questions.
 <!-- /RESULTS:PUBLIC -->
 
 Synthetic support tickets (2,000 records, 4 question types, rule-based labels) are solved to
@@ -123,8 +140,17 @@ shows packed and separate answers agree to 1e-6. That run is the smoke test, not
 Latency (steady state, single request, 3 questions, `examples/bench_latency.py`):
 
 <!-- RESULTS:LATENCY -->
-_(measured after the public run finishes)_
+| base | dtype | device | input tokens | questions | p50 ms | p95 ms |
+|---|---|---|---|---|---|---|
+| Qwen/Qwen3-0.6B | float32 | cuda:0 | 116 | 3 | 41.8 | 53.2 |
+| Qwen/Qwen3-0.6B | bfloat16 | cuda:0 | 116 | 3 | 61.6 | 64.2 |
+| Qwen/Qwen3-0.6B | bfloat16 | cuda:0 | 353 | 12 | 133.4 | 136.8 |
+| Qwen/Qwen3-0.6B | bfloat16 | cuda:0 | 361 | 3 | 132.8 | 133.7 |
 <!-- /RESULTS:LATENCY -->
+
+The GPU is an RTX 2060 SUPER (Turing), which has no native bf16, so fp32 is the faster dtype there;
+on Ampere or newer bf16 wins. Latency grows with input tokens, not with the number of questions:
+12 questions cost the same as 3 once the sequence length matches.
 
 ### Snake, one Choice per tick
 
@@ -132,7 +158,10 @@ _(measured after the public run finishes)_
 the policy, and the game loop asks one Choice question per tick over the legal moves. No text is generated.
 
 <!-- RESULTS:SNAKE -->
-_(recorded after the public run finishes)_
+![any2jev playing Snake](docs/snake.gif)
+
+Held-out teacher moves: accuracy 0.953, ECE 0.034, 400 decisions.
+Recorded game: final score 21 in 161 steps | median latency 41 ms
 <!-- /RESULTS:SNAKE -->
 
 ## How it works
