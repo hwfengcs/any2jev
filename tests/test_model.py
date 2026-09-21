@@ -1,6 +1,7 @@
 import json
 
 import pytest
+import torch
 
 from any2jev.model import DecisionModel
 from any2jev.schema import SystemOneRequest, render, to_specs
@@ -108,3 +109,46 @@ def test_state_truncation_and_branch_limit(tiny_model):
 
     with pytest.raises(ValueError):
         tiny_model.encode("s", to_specs(req), max_branch=4)
+
+
+@pytest.mark.parametrize("architecture", ["llama", "gpt2", "gemma2", "mistral"])
+def test_additional_backbone_modes_preserve_native_attention(tiny_model, example_request, architecture):
+    from transformers import (
+        Gemma2Config,
+        Gemma2ForCausalLM,
+        GPT2Config,
+        GPT2LMHeadModel,
+        LlamaConfig,
+        LlamaForCausalLM,
+        MistralConfig,
+        MistralForCausalLM,
+    )
+
+    from any2jev.model import extract_backbone
+
+    common = dict(vocab_size=len(tiny_model.tok), hidden_size=32, intermediate_size=64, num_hidden_layers=2,
+                  num_attention_heads=2, num_key_value_heads=1, max_position_embeddings=4096)
+    constructors = {
+        "llama": lambda: LlamaForCausalLM(LlamaConfig(**common)),
+        "gpt2": lambda: GPT2LMHeadModel(GPT2Config(vocab_size=len(tiny_model.tok), n_embd=32,
+                                                n_layer=2, n_head=2, n_positions=4096)),
+        "gemma2": lambda: Gemma2ForCausalLM(Gemma2Config(**common, head_dim=16, sliding_window=16)),
+        "mistral": lambda: MistralForCausalLM(MistralConfig(**common, sliding_window=16)),
+    }
+    torch.manual_seed(7)
+    backbone = extract_backbone(constructors[architecture]())
+    model = DecisionModel(backbone, tiny_model.tok, tiny_model.delims, head_dim=16).eval()
+    expected_mode = "rows" if architecture in ("gemma2", "mistral") else "packed"
+    assert model.mode == expected_mode
+    req = SystemOneRequest.model_validate(example_request)
+    state, specs = render(req.state), to_specs(req)
+    packed = model.encode(state, specs)
+    automatic = model.probs([packed])[0]
+    model.mode = "rows"
+    rows = model.probs([packed])[0]
+    alone = [model.probs([model.encode(state, [s])])[0][0] for s in specs]
+    assert _max_diff(automatic, rows) < 1e-5
+    assert _max_diff(rows, alone) < 1e-5
+    if expected_mode == "rows":
+        with pytest.raises(ValueError, match="sliding-window"):
+            DecisionModel(backbone, tiny_model.tok, tiny_model.delims, mode="packed")

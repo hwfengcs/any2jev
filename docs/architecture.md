@@ -40,7 +40,9 @@ Attention rule: token *i* may attend token *j* iff `j <= i` and `seg[j] ∈ {0, 
   without questions. That is what makes prefix caching exact (planned for the server).
 * Hybrid backbones with linear-attention / recurrent layers (Qwen3.5, Mamba-style) cannot honour a custom
   4D mask. any2jev detects them and falls back to **rows mode**: one causal row per question (state +
-  branch), batched. The two modes agree to float noise on attention-only models.
+  branch), batched. Models with active sliding-window attention (such as Gemma2 and Mistral) also
+  use rows mode: a supplied 4D packed mask can bypass the transformer's native sliding-window mask.
+  The two modes agree to float noise on full-attention models.
 
 ## 3. Readout
 

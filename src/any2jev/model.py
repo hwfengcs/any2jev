@@ -86,6 +86,14 @@ def is_hybrid(cfg) -> bool:
     return any(t not in ("full_attention", "sliding_attention") for t in types)
 
 
+def uses_sliding_attention(cfg) -> bool:
+    cfg = text_config(cfg)
+    types = getattr(cfg, "layer_types", None)
+    if types:
+        return "sliding_attention" in types
+    return bool(getattr(cfg, "sliding_window", None)) and getattr(cfg, "use_sliding_window", True)
+
+
 def detect_lora_targets(backbone: nn.Module) -> list[str] | str:
     names = {n.split(".")[-1] for n, m in backbone.named_modules() if isinstance(m, nn.Linear)}
     found = [c for c in CANDIDATE_LORA_TARGETS if c in names]
@@ -144,9 +152,14 @@ class DecisionModel(nn.Module):
         self.temperature = float(temperature)
         self.max_state, self.max_branch = max_state, max_branch
         self.hybrid = is_hybrid(backbone.config)
-        self.mode = ("rows" if self.hybrid else "packed") if mode == "auto" else mode
+        sliding = uses_sliding_attention(backbone.config)
+        if mode not in ("auto", "packed", "rows"):
+            raise ValueError("mode must be auto | packed | rows")
+        self.mode = ("rows" if self.hybrid or sliding else "packed") if mode == "auto" else mode
         if self.mode == "packed" and self.hybrid:
             raise ValueError("hybrid (linear-attention) backbones cannot use the packed mask; use mode='rows'")
+        if self.mode == "packed" and sliding:
+            raise ValueError("sliding-window backbones require their native attention mask; use mode='rows'")
         self.meta = meta or {}
         pad = tok.pad_token_id
         if pad is None:
