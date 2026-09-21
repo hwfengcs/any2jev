@@ -107,6 +107,9 @@ any2jev serve hf://huaweifeng/any2jev-qwen3-0.6b --port 8009
 | [`huaweifeng/any2jev-qwen3-0.6b-snake`](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b-snake) | Qwen3-0.6B | 4000 步 BFS 老师走法 | acc 0.953 | 驱动 `examples/snake.py` |
 | [`huaweifeng/any2jev-qwen3.5-0.8b-synthetic`](https://huggingface.co/huaweifeng/any2jev-qwen3.5-0.8b-synthetic) | Qwen3.5-0.8B（混合架构） | 1600 条合成工单 | acc 0.997 | 验证线性注意力基座上的 rows 模式配方；不是通用模型 |
 
+`hf://user/repo@revision` 同样支持 `train --base`、`eval` 和 Python 的 `DecisionModel.load()`。
+`calibrate` 会原地修改本地 checkpoint；使用 Hub 模型时请先复制到本地目录。
+
 每个仓库约 40 MB（LoRA adapter + pointer head + tokenizer + 配置）；基座权重首次使用时从它自己的 Hub 仓库下载。
 训练数据是英文的，中文输入请用自己的数据重新训练。
 

@@ -41,7 +41,7 @@ def convert(
 
 @app.command()
 def train(
-    base: str = typer.Option(..., help="base model id, or an any2jev checkpoint to continue from"),
+    base: str = typer.Option(..., help="base model id, or local / hf:// any2jev checkpoint to continue from"),
     data: Path = typer.Option(..., help="train JSONL (labelled requests)"),
     out: Path = typer.Option(..., "--out", "-o"),
     val: Optional[Path] = typer.Option(None, help="validation JSONL; enables temperature scaling"),
@@ -75,7 +75,8 @@ def train(
 
 
 @app.command()
-def calibrate(model_dir: Path = typer.Argument(...), data: Path = typer.Option(..., help="validation JSONL")):
+def calibrate(model_dir: Path = typer.Argument(..., exists=True, file_okay=False),
+              data: Path = typer.Option(..., help="validation JSONL")):
     """Fit temperature scaling on held-out data and store it in the checkpoint."""
     from .train import calibrate as _calibrate
 
@@ -84,7 +85,7 @@ def calibrate(model_dir: Path = typer.Argument(...), data: Path = typer.Option(.
 
 @app.command("eval")
 def eval_cmd(
-    model_dir: Path = typer.Argument(...),
+    model_dir: str = typer.Argument(..., help="checkpoint directory, or hf://user/repo[@revision]"),
     data: Path = typer.Option(..., help="test JSONL"),
     out: Optional[Path] = typer.Option(None, help="write the full report as JSON"),
     n_perm: int = typer.Option(4, help="option orders per Choice question for the permutation test (0 = skip)"),
@@ -122,10 +123,9 @@ def serve(
     merge: bool = typer.Option(False, help="merge LoRA into the backbone for faster inference"),
 ):
     """Serve a Jev-compatible API (POST /v1/systemone, GET /v1/models)."""
-    from .hub import resolve_model_dir
     from .serve import serve as _serve
 
-    _serve(resolve_model_dir(model_dir), host=host, port=port, device=device, dtype=dtype, model_name=model_name, merge=merge)
+    _serve(model_dir, host=host, port=port, device=device, dtype=dtype, model_name=model_name, merge=merge)
 
 
 @app.command()
@@ -163,10 +163,8 @@ def ask(
     merge: bool = typer.Option(False, help="merge LoRA into the backbone for faster inference"),
 ):
     """Ask a checkpoint directly, without starting a server."""
-    from .hub import resolve_model_dir
     from .model import DecisionModel
 
-    model_dir = resolve_model_dir(model_dir)
     if request:
         body = json.loads(Path(request).read_text(encoding="utf-8"))
     else:

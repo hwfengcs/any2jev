@@ -108,6 +108,9 @@ any2jev serve hf://huaweifeng/any2jev-qwen3-0.6b --port 8009
 | [`huaweifeng/any2jev-qwen3-0.6b-snake`](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b-snake) | Qwen3-0.6B | 4k BFS-teacher Snake moves | acc 0.953 | drives `examples/snake.py` |
 | [`huaweifeng/any2jev-qwen3.5-0.8b-synthetic`](https://huggingface.co/huaweifeng/any2jev-qwen3.5-0.8b-synthetic) | Qwen3.5-0.8B (hybrid) | 1.6k synthetic tickets | acc 0.997 | proves the rows-mode recipe on a linear-attention backbone; not a general model |
 
+`hf://user/repo@revision` also works with `train --base`, `eval` and Python's `DecisionModel.load()`.
+`calibrate` edits a local checkpoint in place; copy a Hub checkpoint locally before using it.
+
 Each repo is ~40 MB (LoRA adapter + pointer head + tokenizer + config); the base weights download from
 their own Hub repo on first use.
 

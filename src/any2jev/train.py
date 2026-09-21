@@ -110,10 +110,13 @@ def collect_logits(model: DecisionModel, records: list[Record], batch_size: int 
 
 
 def load_or_create(cfg: TrainConfig) -> DecisionModel:
-    if DecisionModel.is_checkpoint(cfg.base):
-        return DecisionModel.load(cfg.base, device=cfg.device, dtype=cfg.dtype, attn=cfg.attn, trainable=True)
+    from .hub import resolve_model_dir
+
+    base = resolve_model_dir(cfg.base)
+    if DecisionModel.is_checkpoint(base):
+        return DecisionModel.load(base, device=cfg.device, dtype=cfg.dtype, attn=cfg.attn, trainable=True)
     return DecisionModel.from_base(
-        cfg.base, lora_r=cfg.lora_r, lora_alpha=cfg.lora_alpha, lora_targets=cfg.lora_targets, head_dim=cfg.head_dim,
+        base, lora_r=cfg.lora_r, lora_alpha=cfg.lora_alpha, lora_targets=cfg.lora_targets, head_dim=cfg.head_dim,
         delimiters=cfg.delimiters, dtype=cfg.dtype, attn=cfg.attn, device=cfg.device, max_state=cfg.max_state,
         max_branch=cfg.max_branch)
 
@@ -236,8 +239,12 @@ def _log_eval(model, val, log, tag):
 
 def calibrate(model_dir: str | Path, val_path: str | Path, device: str | None = None, log=print) -> float:
     """Fit a temperature on ``val_path`` and write it into the checkpoint config."""
-    model = DecisionModel.load(model_dir, device=device)
+    if str(model_dir).startswith("hf://"):
+        raise ValueError("calibrate updates a local checkpoint; copy the Hub checkpoint to a local directory first")
     val = load_jsonl(val_path)
+    if not val:
+        raise ValueError(f"validation data is empty: {val_path}")
+    model = DecisionModel.load(model_dir, device=device)
     logits, labels, _ = collect_logits(model, val)
     before = summarize(logits, labels, 1.0)
     t = fit_temperature(logits, labels)

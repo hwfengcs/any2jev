@@ -21,3 +21,18 @@ def test_cli_data_synthetic(tmp_path):
     assert r.exit_code == 0, r.output
     for split, n in (("train", 24), ("val", 3), ("test", 3)):
         assert sum(1 for _ in open(tmp_path / f"{split}.jsonl", encoding="utf-8")) == n
+
+
+def test_eval_preserves_hub_uri(monkeypatch):
+    calls = []
+
+    def evaluate(path, *args, **kwargs):
+        calls.append(path)
+        return {"temperature": 1.0, "n_questions": 0, "metrics": {},
+                "isolation": {"n": 0, "max_abs_prob_diff": None}}
+
+    monkeypatch.setattr("any2jev.evaluate.evaluate_checkpoint", evaluate)
+    result = CliRunner().invoke(app, ["eval", "hf://user/model@v1", "--data", "test.jsonl"])
+    assert result.exit_code == 0, result.output
+    assert calls == ["hf://user/model@v1"]
+    assert "skipped" in result.output

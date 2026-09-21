@@ -255,7 +255,9 @@ class DecisionModel(nn.Module):
         from peft import PeftModel
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
-        path = Path(path)
+        from .hub import resolve_model_dir
+
+        path = Path(resolve_model_dir(str(path)))
         cfg = json.loads((path / CONFIG_NAME).read_text(encoding="utf-8"))
         torch_dtype = parse_dtype(dtype or cfg.get("compute_dtype", "fp32"))
         tok = AutoTokenizer.from_pretrained(path / "tokenizer")
