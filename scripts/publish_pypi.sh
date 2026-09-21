@@ -10,6 +10,7 @@
 # upload through PyPI trusted publishing.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+export PYTHONIOENCODING=utf-8 PYTHONUTF8=1   # twine's progress bar uses characters a GBK console cannot print
 
 TOKEN_FILE="${PYPI_TOKEN_FILE:-pypi_token.txt}"
 if [[ -z "${PYPI_TOKEN:-}" ]]; then
