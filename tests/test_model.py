@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from any2jev.model import DecisionModel
 from any2jev.schema import SystemOneRequest, render, to_specs
 
@@ -42,6 +44,18 @@ def test_batch_padding_invariance(tiny_model, example_request):
     assert _max_diff(batched[1], tiny_model.probs([short])[0]) < 1e-4
 
 
+@pytest.mark.parametrize("mode", ["packed", "rows"])
+def test_forward_does_not_allocate_unused_kv_cache(tiny_model, example_request, monkeypatch, mode):
+    caches = []
+    hook = tiny_model.backbone.register_forward_hook(lambda _m, _args, output: caches.append(output.past_key_values))
+    monkeypatch.setattr(tiny_model, "mode", mode)
+    try:
+        tiny_model.decide(example_request)
+    finally:
+        hook.remove()
+    assert caches == [None]
+
+
 def test_decide_returns_wire_answers(tiny_model, example_request):
     answers, n_in = tiny_model.decide(example_request)
     assert set(answers) == {"nice", "season", "crowd"} and n_in > 0
@@ -82,6 +96,8 @@ def test_save_load_round_trip(tiny_model, example_request, tmp_path):
     default = m2.probs([m2.encode(state, specs)])[0]
     explicit = m2.probs([m2.encode(state, specs)], temperature=1.7)[0]
     assert _max_diff(default, explicit) < 1e-6
+    merged = DecisionModel.load(out, device="cpu", merge=True)
+    assert _max_diff(default, merged.probs([merged.encode(state, specs)])[0]) < 1e-5
 
 
 def test_state_truncation_and_branch_limit(tiny_model):

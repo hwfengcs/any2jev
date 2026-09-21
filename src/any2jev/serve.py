@@ -13,13 +13,14 @@ import time
 from datetime import date
 
 from .model import DecisionModel
+from .packing import InputTooLongError
 from .schema import SystemOneRequest
 
 DEFAULT_MODEL_NAME = "any2jev-latest"
 
 
 def create_app(model: DecisionModel, model_name: str = DEFAULT_MODEL_NAME, aliases: tuple[str, ...] = ("jev-latest",)):
-    from fastapi import FastAPI
+    from fastapi import FastAPI, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
 
     app = FastAPI(title="any2jev", version="0.1.0")
@@ -32,11 +33,14 @@ def create_app(model: DecisionModel, model_name: str = DEFAULT_MODEL_NAME, alias
         # Any model name is accepted and routed to the one model we serve (Jev-style aliasing).
         with lock:
             t0 = time.perf_counter()
-            answers, n_in = model.decide(req)
+            try:
+                answers, n_in = model.decide(req)
+            except InputTooLongError as e:
+                raise HTTPException(status_code=422, detail=str(e)) from e
             latency_ms = (time.perf_counter() - t0) * 1000
-        stats["requests"] += 1
-        stats["questions"] += len(req.questions)
-        stats["latency_ms_total"] += latency_ms
+            stats["requests"] += 1
+            stats["questions"] += len(req.questions)
+            stats["latency_ms_total"] += latency_ms
         n_out = len(model.tok(json.dumps(answers), add_special_tokens=False).input_ids)  # billing-style, not generated
         return {"model": model_name, "answers": answers, "usage": {"input_tokens": n_in, "output_tokens": n_out},
                 "latency_ms": round(latency_ms, 1)}
@@ -56,10 +60,10 @@ def create_app(model: DecisionModel, model_name: str = DEFAULT_MODEL_NAME, alias
 
 
 def serve(model_dir: str, host: str = "127.0.0.1", port: int = 8009, device: str | None = None,
-          dtype: str | None = None, attn: str | None = None, model_name: str = DEFAULT_MODEL_NAME):
+          dtype: str | None = None, attn: str | None = None, model_name: str = DEFAULT_MODEL_NAME, merge: bool = False):
     import uvicorn
 
-    model = DecisionModel.load(model_dir, device=device, dtype=dtype, attn=attn)
+    model = DecisionModel.load(model_dir, device=device, dtype=dtype, attn=attn, merge=merge)
     app = create_app(model, model_name)
     print(f"any2jev: serving {model_dir} ({model.meta.get('base')}) on http://{host}:{port}  mode={model.mode} device={model.device}")
     uvicorn.run(app, host=host, port=port, log_level="info")

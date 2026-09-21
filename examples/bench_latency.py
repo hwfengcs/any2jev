@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 import time
 
@@ -29,16 +30,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("model_dir")
     ap.add_argument("--dtype", default=None)
+    ap.add_argument("--merge", action="store_true", help="merge LoRA into the backbone before measuring")
     ap.add_argument("--n", type=int, default=50)
     ap.add_argument("--questions", type=int, default=3, help="repeat the 3 questions to reach this many")
     ap.add_argument("--state-repeat", type=int, default=1, help="repeat the state text to lengthen it")
     a = ap.parse_args()
+    if min(a.n, a.questions, a.state_repeat) < 1:
+        ap.error("--n, --questions and --state-repeat must be positive")
 
     import torch
 
     from any2jev.model import DecisionModel
 
-    model = DecisionModel.load(a.model_dir, dtype=a.dtype)
+    model = DecisionModel.load(a.model_dir, dtype=a.dtype, merge=a.merge)
     req = json.loads(json.dumps(REQUEST))
     req["state"] = " ".join([req["state"]] * a.state_repeat)
     base_qs = list(req["questions"].items())
@@ -48,6 +52,7 @@ def main():
         model.decide(req)
     if torch.cuda.is_available():
         torch.cuda.synchronize()
+        torch.cuda.reset_peak_memory_stats()
     times = []
     for _ in range(a.n):
         t0 = time.perf_counter()
@@ -58,8 +63,10 @@ def main():
     times.sort()
     print(json.dumps({"model": a.model_dir, "base": model.meta.get("base"), "dtype": str(model.compute_dtype),
                       "device": str(model.device), "mode": model.mode, "input_tokens": n_in,
+                      "merged": a.merge, "samples": a.n,
+                      "peak_memory_mib": round(torch.cuda.max_memory_allocated() / 1024**2, 1) if model.device.type == "cuda" else None,
                       "questions": len(req["questions"]), "p50_ms": round(statistics.median(times), 1),
-                      "p95_ms": round(times[int(0.95 * len(times)) - 1], 1), "min_ms": round(times[0], 1)}, indent=2))
+                      "p95_ms": round(times[math.ceil(0.95 * len(times)) - 1], 1), "min_ms": round(times[0], 1)}, indent=2))
 
 
 if __name__ == "__main__":

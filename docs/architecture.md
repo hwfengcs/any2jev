@@ -100,3 +100,9 @@ largest qualifying threshold set. Neither metric depends on the input order of t
 
 `any2jev serve` exposes `POST /v1/systemone` and `GET /v1/models` with TypeSafe's exact request and
 response shapes, so the official `typesafe-sdk` and any Jev integration work with a `base_url` change.
+
+Decision forwards disable the unused KV cache. `any2jev serve CHECKPOINT --merge` (also available on
+`ask`) merges LoRA and trainable delimiter rows into the backbone in memory, reducing inference
+overhead without changing the checkpoint on disk. Floating-point rounding can slightly change the
+probabilities; validate on your data when changing precision or enabling merging. Questions that
+exceed the branch token limit return HTTP 422.

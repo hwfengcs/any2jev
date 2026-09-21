@@ -32,6 +32,10 @@ REUSABLE_DELIM_SETS: list[list[str]] = [
 ]
 
 
+class InputTooLongError(ValueError):
+    """A request exceeds the model's encoding limits."""
+
+
 @dataclass
 class Delimiters:
     tokens: list[str]
@@ -153,7 +157,7 @@ def encode(
             ends.append(len(branch) - 1)
         branch.append(delims.decide)
         if len(branch) > max_branch:
-            raise ValueError(f"question {spec.qid!r} is {len(branch)} tokens, over the {max_branch}-token branch limit")
+            raise InputTooLongError(f"question {spec.qid!r} is {len(branch)} tokens, over the {max_branch}-token branch limit")
         base = len(ids)
         ids += branch
         seg += [k] * len(branch)

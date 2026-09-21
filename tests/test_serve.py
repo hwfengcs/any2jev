@@ -52,6 +52,20 @@ def test_validation_422(client, body):
     assert client.post("/v1/systemone", json=body).status_code == 422
 
 
+def test_branch_limit_returns_422_and_server_recovers(tiny_model):
+    from fastapi.testclient import TestClient
+
+    with TestClient(create_app(tiny_model), raise_server_exceptions=False) as client:
+        before = client.get("/health").json()["requests"]
+        body = {"state": "short", "questions": {"q": {"type": "noul", "instructions": "word " * 1500}}}
+        response = client.post("/v1/systemone", json=body)
+        assert response.status_code == 422
+        assert "branch limit" in response.json()["detail"]
+        assert client.get("/health").json()["requests"] == before
+        body["questions"]["q"]["instructions"] = "Is this short?"
+        assert client.post("/v1/systemone", json=body).status_code == 200
+
+
 def test_packed_equals_separate(client):
     qs = {"a": {"type": "noul", "instructions": "Is the weather described as nice?"},
           "b": {"type": "choice", "instructions": "Which season is it most likely?", "criteria": {"summer": None, "winter": None, "unknown": None}}}

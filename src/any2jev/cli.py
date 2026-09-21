@@ -116,12 +116,13 @@ def serve(
     dtype: Optional[str] = typer.Option(None, help="override backbone dtype, e.g. bf16 for serving"),
     device: Optional[str] = typer.Option(None),
     model_name: str = typer.Option("any2jev-latest"),
+    merge: bool = typer.Option(False, help="merge LoRA into the backbone for faster inference"),
 ):
     """Serve a Jev-compatible API (POST /v1/systemone, GET /v1/models)."""
     from .hub import resolve_model_dir
     from .serve import serve as _serve
 
-    _serve(resolve_model_dir(model_dir), host=host, port=port, device=device, dtype=dtype, model_name=model_name)
+    _serve(resolve_model_dir(model_dir), host=host, port=port, device=device, dtype=dtype, model_name=model_name, merge=merge)
 
 
 @app.command()
@@ -156,6 +157,7 @@ def ask(
     score: list[str] = typer.Option([], help='"instructions | level0, level1, ..." (repeatable)'),
     request: Optional[Path] = typer.Option(None, help="a full /v1/systemone request JSON file instead of flags"),
     dtype: Optional[str] = typer.Option(None),
+    merge: bool = typer.Option(False, help="merge LoRA into the backbone for faster inference"),
 ):
     """Ask a checkpoint directly, without starting a server."""
     from .hub import resolve_model_dir
@@ -179,7 +181,7 @@ def ask(
         if not qs:
             raise typer.BadParameter("give at least one --choice / --noul / --score, or --request")
         body = {"state": st, "questions": qs}
-    m = DecisionModel.load(model_dir, dtype=dtype)
+    m = DecisionModel.load(model_dir, dtype=dtype, merge=merge)
     t0 = time.perf_counter()
     answers, n_in = m.decide(body)
     ms = (time.perf_counter() - t0) * 1000

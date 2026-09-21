@@ -291,7 +291,7 @@ class DecisionModel(nn.Module):
             ids[i, : len(p)] = torch.as_tensor(p.ids, device=dev)
             pos[i, : len(p)] = torch.as_tensor(p.pos, device=dev)
         mask = block_mask([p.seg for p in packs], length, self.compute_dtype, dev)
-        h = self.backbone(input_ids=ids, position_ids=pos, attention_mask=mask).last_hidden_state.float()
+        h = self.backbone(input_ids=ids, position_ids=pos, attention_mask=mask, use_cache=False).last_hidden_state.float()
         return [self._readout(h[i], p.decide_idx, p.opt_idx) for i, p in enumerate(packs)]
 
     def _logits_rows(self, packs: list[Packed]) -> list[list[torch.Tensor]]:
@@ -309,7 +309,7 @@ class DecisionModel(nn.Module):
             ids[i, : len(r.ids)] = torch.as_tensor(r.ids, device=dev)
             pos[i, : len(r.pos)] = torch.as_tensor(r.pos, device=dev)
             att[i, : len(r.ids)] = 1
-        h = self.backbone(input_ids=ids, position_ids=pos, attention_mask=att).last_hidden_state.float()
+        h = self.backbone(input_ids=ids, position_ids=pos, attention_mask=att, use_cache=False).last_hidden_state.float()
         out: list[list[torch.Tensor]] = [[] for _ in packs]
         for i, (owner, r) in enumerate(zip(owners, rows)):
             out[owner].append(self.head(h[i, r.decide], h[i, torch.as_tensor(r.opts, device=dev)]))
