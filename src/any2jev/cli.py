@@ -110,7 +110,7 @@ def eval_cmd(
 
 @app.command()
 def serve(
-    model_dir: Path = typer.Argument(...),
+    model_dir: str = typer.Argument(..., help="checkpoint directory, or hf://user/repo"),
     host: str = typer.Option("127.0.0.1"),
     port: int = typer.Option(8009),
     dtype: Optional[str] = typer.Option(None, help="override backbone dtype, e.g. bf16 for serving"),
@@ -118,9 +118,22 @@ def serve(
     model_name: str = typer.Option("any2jev-latest"),
 ):
     """Serve a Jev-compatible API (POST /v1/systemone, GET /v1/models)."""
+    from .hub import resolve_model_dir
     from .serve import serve as _serve
 
-    _serve(str(model_dir), host=host, port=port, device=device, dtype=dtype, model_name=model_name)
+    _serve(resolve_model_dir(model_dir), host=host, port=port, device=device, dtype=dtype, model_name=model_name)
+
+
+@app.command()
+def push(
+    model_dir: Path = typer.Argument(...),
+    repo: str = typer.Option(..., help="Hugging Face repo id, e.g. user/any2jev-qwen3-0.6b"),
+    private: bool = typer.Option(False),
+):
+    """Upload a checkpoint (adapter, head, tokenizer, config, model card) to the Hugging Face Hub."""
+    from .hub import push as _push
+
+    console.print(f"[green]pushed[/] {_push(model_dir, repo, private)}")
 
 
 def _parse_q(spec: str, qtype: str) -> dict:
@@ -136,7 +149,7 @@ def _parse_q(spec: str, qtype: str) -> dict:
 
 @app.command()
 def ask(
-    model_dir: Path = typer.Argument(...),
+    model_dir: str = typer.Argument(..., help="checkpoint directory, or hf://user/repo"),
     state: str = typer.Option("", help="the state text (or a path to a .txt/.json file)"),
     choice: list[str] = typer.Option([], help='"instructions | opt1, opt2, ..." (repeatable)'),
     noul: list[str] = typer.Option([], help='"yes/no question" (repeatable)'),
@@ -145,8 +158,10 @@ def ask(
     dtype: Optional[str] = typer.Option(None),
 ):
     """Ask a checkpoint directly, without starting a server."""
+    from .hub import resolve_model_dir
     from .model import DecisionModel
 
+    model_dir = resolve_model_dir(model_dir)
     if request:
         body = json.loads(Path(request).read_text(encoding="utf-8"))
     else:

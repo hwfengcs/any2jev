@@ -6,8 +6,14 @@ from any2jev.cli import app
 def test_cli_help_lists_commands():
     r = CliRunner().invoke(app, ["--help"])
     assert r.exit_code == 0
-    for cmd in ("convert", "train", "calibrate", "eval", "serve", "ask", "data"):
+    for cmd in ("convert", "train", "calibrate", "eval", "serve", "ask", "push", "data"):
         assert cmd in r.output
+
+
+def test_resolve_model_dir_passthrough(tmp_path):
+    from any2jev.hub import resolve_model_dir
+
+    assert resolve_model_dir(str(tmp_path)) == str(tmp_path)
 
 
 def test_cli_data_synthetic(tmp_path):
