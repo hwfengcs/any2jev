@@ -32,7 +32,7 @@ TypeSafe 的 [Jev](https://typesafe.ai) 证明了一件事：一个"只做决定
 ## 你会得到什么
 
 * **模型手术**：卸掉词表头，挂一个 pointer head，用决策 token 给每个选项的隐状态打分。任何
-  `AutoModelForCausalLM` 都行，包括混合架构（Qwen3.5）。
+  `AutoModelForCausalLM` 都行；混合架构（Qwen3.5）退化为每个问题一行因果序列。
 * **块因果打包**：state 只编码一次；每个问题只看得到 state 和自己，看不到其他问题，所以答案不依赖于
   同一次请求里还问了什么（有单测保证，不是口头承诺）。
 * **训练**：LoRA + 头 + 分隔符 embedding，交叉熵加可选的 Brier / 有序损失，训练时打乱选项顺序，最后在验证集上做
@@ -51,7 +51,8 @@ pip install any2jev[serve]              # 公开数据集加 [data]，官方 SDK
 any2jev data synthetic --out data/synthetic --n 2000
 any2jev data build --sources boolq,ag_news,banking77,sst5 --out data/public --n-per-source 1500
 
-# 2. 训练：手术 + LoRA + 头 + 温度缩放一条命令（0.6B 在 8GB 显卡上约 7 分钟）
+# 2. 训练：手术 + LoRA + 头 + 温度缩放一条命令
+#    （Qwen3-0.6B 在一张 8GB 显卡上：2000 条短工单约 7 分钟，5400 条公开数据约 55 分钟）
 any2jev train --base Qwen/Qwen3-0.6B --data data/public/train.jsonl --val data/public/val.jsonl --out runs/qwen3-0.6b
 
 # 3. 评测
@@ -100,6 +101,22 @@ _（公开数据集的实验正在跑，数字随后填入）_
 <!-- RESULTS:LATENCY -->
 _（公开数据实验结束后测）_
 <!-- /RESULTS:LATENCY -->
+
+### 贪吃蛇：每一步问一个 Choice
+
+`examples/snake.py` 用 BFS 老师生成带标签的走法，`any2jev train` 把 Qwen3-0.6B 训成策略，游戏循环每一步
+就合法走法问一个 Choice 问题。全程不生成文本。
+
+<!-- RESULTS:SNAKE -->
+_（公开数据实验结束后录制）_
+<!-- /RESULTS:SNAKE -->
+
+## 基座怎么选
+
+`AutoModelForCausalLM` 能加载的都行。目前跑过 benchmark 的只有 Qwen3-0.6B（纯注意力，打包模式）。
+带线性注意力层的混合架构（Qwen3.5）走"每问题一行"的退化路径，该路径有单测覆盖，但还没跑过真实 benchmark。
+Qwen、Llama 3、Gemma 的 tokenizer 内置了分隔符复用方案，其他 tokenizer 会新增五个 token。
+fp32 LoRA 训练、384 token state 的显存粗估：0.6B 约 8 GB，1.7B 约 16 GB（`--dtype bf16` 减半）。
 
 ## 原理
 

@@ -37,5 +37,6 @@ tail -2 runs/snake/play.log | tee -a "$LOG"
 
 log "fill README"
 python scripts/fill_readme.py --eval runs/qwen3-0.6b-public/eval.json \
-  --baseline runs/qwen3-0.6b-public/baseline_zeroshot.json --latency runs/latency.json >> "$LOG" 2>&1 || log "fill_readme FAILED"
+  --baseline runs/qwen3-0.6b-public/baseline_zeroshot.json --latency runs/latency.json \
+  --snake-eval runs/snake/eval.json --snake-play runs/snake/play.log >> "$LOG" 2>&1 || log "fill_readme FAILED"
 log "PIPELINE DONE"

@@ -62,21 +62,41 @@ def latency_table(lat: list[dict], lang: str) -> str:
     return "\n".join(rows)
 
 
+def snake_block(sn: dict | None, play: str | None, lang: str) -> str:
+    parts = ["![any2jev playing Snake](docs/snake.gif)", ""]
+    if sn and "metrics" in sn:
+        m = sn["metrics"]["overall"]
+        parts.append({"en": f"Held-out teacher moves: accuracy {m['accuracy']:.3f}, ECE {m['ece']:.3f}, {m['n']} decisions.",
+                      "zh": f"held-out 老师走法：准确率 {m['accuracy']:.3f}，ECE {m['ece']:.3f}，{m['n']} 次决策。"}[lang])
+    if play:
+        parts.append({"en": f"Recorded game: {play}", "zh": f"录制对局：{play}"}[lang])
+    return "\n".join(parts)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--eval", required=True)
     ap.add_argument("--baseline", default=None)
     ap.add_argument("--latency", default=None, help="JSON list of bench_latency.py outputs")
+    ap.add_argument("--snake-eval", default=None)
+    ap.add_argument("--snake-play", default=None, help="play.log from examples/snake.py")
     a = ap.parse_args()
     ev = json.loads(Path(a.eval).read_text(encoding="utf-8"))
     base = json.loads(Path(a.baseline).read_text(encoding="utf-8")) if a.baseline else None
     lat = json.loads(Path(a.latency).read_text(encoding="utf-8")) if a.latency else None
+    sn = json.loads(Path(a.snake_eval).read_text(encoding="utf-8")) if a.snake_eval and Path(a.snake_eval).exists() else None
+    play = None
+    if a.snake_play and Path(a.snake_play).exists():
+        lines = [ln for ln in Path(a.snake_play).read_text(encoding="utf-8", errors="ignore").splitlines() if ln.startswith("final score")]
+        play = lines[-1] if lines else None
     for fn, lang in (("README.md", "en"), ("README_zh.md", "zh")):
         p = ROOT / fn
         text = p.read_text(encoding="utf-8")
         text = replace_block(text, "PUBLIC", public_table(ev, base, lang))
         if lat:
             text = replace_block(text, "LATENCY", latency_table(lat, lang))
+        if (ROOT / "docs" / "snake.gif").exists():
+            text = replace_block(text, "SNAKE", snake_block(sn, play, lang))
         p.write_text(text, encoding="utf-8")
         print("updated", fn)
 

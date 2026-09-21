@@ -46,7 +46,8 @@ SmolLM, Phi, Mistral, ...) plus a few thousand labelled decisions, and get a mod
 ```
 
 * **Model surgery** — the vocabulary head is dropped; a pointer head scores each option's hidden state
-  against a decision token. Works on any `AutoModelForCausalLM`, including hybrid backbones (Qwen3.5).
+  against a decision token. Works on any `AutoModelForCausalLM`; hybrid backbones (Qwen3.5) fall back
+  to one causal row per question.
 * **Block-causal packing** — the state is encoded once; every question attends to it and to itself
   only, so answers never depend on sibling questions (verified by a test, not a promise).
 * **Training** — LoRA + head + delimiter embeddings, cross-entropy plus optional Brier / ordinal terms,
@@ -65,7 +66,8 @@ pip install any2jev[serve]              # + [data] for public datasets, [compat]
 any2jev data synthetic --out data/synthetic --n 2000
 any2jev data build --sources boolq,ag_news,banking77,sst5 --out data/public --n-per-source 1500
 
-# 2. train: surgery + LoRA + head + temperature scaling in one command (~7 min on an 8 GB GPU for 0.6B)
+# 2. train: surgery + LoRA + head + temperature scaling in one command
+#    (Qwen3-0.6B on one 8 GB GPU: 7 min for 2k short tickets, ~55 min for 5.4k public records)
 any2jev train --base Qwen/Qwen3-0.6B --data data/public/train.jsonl --val data/public/val.jsonl --out runs/qwen3-0.6b
 
 # 3. evaluate: calibration, order sensitivity, isolation
@@ -124,6 +126,15 @@ Latency (steady state, single request, 3 questions, `examples/bench_latency.py`)
 _(measured after the public run finishes)_
 <!-- /RESULTS:LATENCY -->
 
+### Snake, one Choice per tick
+
+`examples/snake.py` generates labelled moves from a BFS teacher, `any2jev train` turns Qwen3-0.6B into
+the policy, and the game loop asks one Choice question per tick over the legal moves. No text is generated.
+
+<!-- RESULTS:SNAKE -->
+_(recorded after the public run finishes)_
+<!-- /RESULTS:SNAKE -->
+
 ## How it works
 
 See [docs/architecture.md](docs/architecture.md). In short:
@@ -139,10 +150,11 @@ See [docs/architecture.md](docs/architecture.md). In short:
 
 ## Which base model?
 
-Anything `AutoModelForCausalLM` loads. Tested: Qwen3-0.6B (attention-only, packed mode) and the
-Qwen3.5 family (hybrid, rows mode). Delimiter reuse is built in for Qwen, Llama 3 and Gemma tokenizers;
-other tokenizers get five new tokens. Rough VRAM for training in fp32 with LoRA: 0.6B → 8 GB,
-1.7B → 16 GB, 4B → 24 GB (use `--dtype bf16` to halve it).
+Anything `AutoModelForCausalLM` loads. Benchmarked so far: Qwen3-0.6B (attention-only, packed mode).
+Hybrid backbones with linear-attention layers (Qwen3.5) take the rows-mode fallback; that code path is
+unit-tested, a hybrid benchmark is pending. Delimiter reuse is built in for Qwen, Llama 3 and Gemma
+tokenizers; other tokenizers get five new tokens. Rough VRAM for fp32 LoRA training with 384-token
+states: 0.6B → 8 GB, 1.7B → 16 GB (use `--dtype bf16` to halve it).
 
 ## Roadmap
 
