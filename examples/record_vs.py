@@ -76,7 +76,7 @@ def record_generate(base: str, dtype: torch.dtype, device: str, runs: int, max_n
 
     tok = AutoTokenizer.from_pretrained(base)
     torch.cuda.reset_peak_memory_stats()
-    model = AutoModelForCausalLM.from_pretrained(base, dtype=dtype).to(device).eval()
+    model = AutoModelForCausalLM.from_pretrained(base, torch_dtype=dtype).to(device).eval()
     prompt = tok.apply_chat_template(json_messages(STATE, QUESTIONS), add_generation_prompt=True, tokenize=False,
                                      enable_thinking=False)
     inputs = tok(prompt, return_tensors="pt").to(device)
@@ -119,7 +119,7 @@ def record_logit_reading(base: str, dtype: torch.dtype, device: str, runs: int) 
 
     tok = AutoTokenizer.from_pretrained(base)
     torch.cuda.reset_peak_memory_stats()
-    model = AutoModelForCausalLM.from_pretrained(base, dtype=dtype).to(device).eval()
+    model = AutoModelForCausalLM.from_pretrained(base, torch_dtype=dtype).to(device).eval()
     specs = to_specs(SystemOneRequest.model_validate({"state": STATE, "questions": QUESTIONS}))
     letters = string.ascii_uppercase
     letter_ids = [tok(" " + L, add_special_tokens=False).input_ids[-1] for L in letters]

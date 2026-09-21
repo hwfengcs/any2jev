@@ -43,6 +43,7 @@ Attention rule: token *i* may attend token *j* iff `j <= i` and `seg[j] ∈ {0, 
   branch), batched. Models with active sliding-window attention (such as Gemma2 and Mistral) also
   use rows mode: a supplied 4D packed mask can bypass the transformer's native sliding-window mask.
   The two modes agree to float noise on full-attention models.
+* GPT-2 also defaults to rows: older supported Transformers releases flatten its 4D attention mask.
 
 ## 3. Readout
 

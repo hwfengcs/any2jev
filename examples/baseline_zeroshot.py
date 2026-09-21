@@ -45,7 +45,7 @@ def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tok = AutoTokenizer.from_pretrained(a.base)
-    model = AutoModelForCausalLM.from_pretrained(a.base, dtype={"fp32": torch.float32, "bf16": torch.bfloat16}[a.dtype]).to(a.device).eval()
+    model = AutoModelForCausalLM.from_pretrained(a.base, torch_dtype={"fp32": torch.float32, "bf16": torch.bfloat16}[a.dtype]).to(a.device).eval()
     letter_ids = [tok(" " + L, add_special_tokens=False).input_ids[-1] for L in LETTERS]
 
     def run(records):

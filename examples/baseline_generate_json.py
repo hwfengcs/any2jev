@@ -92,7 +92,7 @@ def main():
     tok = AutoTokenizer.from_pretrained(a.base)
     dtype = {"fp32": torch.float32, "bf16": torch.bfloat16}[a.dtype]
     torch.cuda.reset_peak_memory_stats()
-    model = AutoModelForCausalLM.from_pretrained(a.base, dtype=dtype).cuda().eval()
+    model = AutoModelForCausalLM.from_pretrained(a.base, torch_dtype=dtype).cuda().eval()
     records = load_jsonl(a.data)[: a.max_records]
     rows, t_start = [], time.time()
     for n, rec in enumerate(records, 1):

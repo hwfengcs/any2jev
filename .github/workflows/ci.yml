@@ -11,6 +11,10 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.12"]
+        dependencies: [latest]
+        include:
+          - python-version: "3.10"
+            dependencies: minimum
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,8 +25,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[dev,compat]"
+      - name: Install minimum model dependencies
+        if: matrix.dependencies == 'minimum'
+        run: pip install "transformers==4.51.3" "peft==0.14.0"
       - name: Lint
-        run: ruff check src tests
+        run: ruff check src tests examples scripts
       - name: Test
         env:
           HF_HUB_DISABLE_PROGRESS_BARS: "1"

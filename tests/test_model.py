@@ -138,7 +138,7 @@ def test_additional_backbone_modes_preserve_native_attention(tiny_model, example
     torch.manual_seed(7)
     backbone = extract_backbone(constructors[architecture]())
     model = DecisionModel(backbone, tiny_model.tok, tiny_model.delims, head_dim=16).eval()
-    expected_mode = "rows" if architecture in ("gemma2", "mistral") else "packed"
+    expected_mode = "packed" if architecture == "llama" else "rows"
     assert model.mode == expected_mode
     req = SystemOneRequest.model_validate(example_request)
     state, specs = render(req.state), to_specs(req)
@@ -149,6 +149,6 @@ def test_additional_backbone_modes_preserve_native_attention(tiny_model, example
     alone = [model.probs([model.encode(state, [s])])[0][0] for s in specs]
     assert _max_diff(automatic, rows) < 1e-5
     assert _max_diff(rows, alone) < 1e-5
-    if expected_mode == "rows":
+    if architecture in ("gemma2", "mistral"):
         with pytest.raises(ValueError, match="sliding-window"):
             DecisionModel(backbone, tiny_model.tok, tiny_model.delims, mode="packed")

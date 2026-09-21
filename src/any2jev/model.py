@@ -153,13 +153,17 @@ class DecisionModel(nn.Module):
         self.max_state, self.max_branch = max_state, max_branch
         self.hybrid = is_hybrid(backbone.config)
         sliding = uses_sliding_attention(backbone.config)
+        # GPT-2 in older supported Transformers versions flattens supplied 4D masks.
+        legacy_mask = text_config(backbone.config).model_type == "gpt2"
         if mode not in ("auto", "packed", "rows"):
             raise ValueError("mode must be auto | packed | rows")
-        self.mode = ("rows" if self.hybrid or sliding else "packed") if mode == "auto" else mode
+        self.mode = ("rows" if self.hybrid or sliding or legacy_mask else "packed") if mode == "auto" else mode
         if self.mode == "packed" and self.hybrid:
             raise ValueError("hybrid (linear-attention) backbones cannot use the packed mask; use mode='rows'")
         if self.mode == "packed" and sliding:
             raise ValueError("sliding-window backbones require their native attention mask; use mode='rows'")
+        if self.mode == "packed" and legacy_mask:
+            raise ValueError("this backbone does not consistently support a 4D packed mask; use mode='rows'")
         self.meta = meta or {}
         pad = tok.pad_token_id
         if pad is None:
@@ -191,7 +195,7 @@ class DecisionModel(nn.Module):
 
         torch_dtype = parse_dtype(dtype)
         tok = AutoTokenizer.from_pretrained(base, revision=revision)
-        full = AutoModelForCausalLM.from_pretrained(base, revision=revision, dtype=torch_dtype, attn_implementation=attn)
+        full = AutoModelForCausalLM.from_pretrained(base, revision=revision, torch_dtype=torch_dtype, attn_implementation=attn)
         backbone = extract_backbone(full)
         del full  # the vocabulary head goes with it
         delims = resolve_delimiters(tok, delimiters)
@@ -255,7 +259,7 @@ class DecisionModel(nn.Module):
         cfg = json.loads((path / CONFIG_NAME).read_text(encoding="utf-8"))
         torch_dtype = parse_dtype(dtype or cfg.get("compute_dtype", "fp32"))
         tok = AutoTokenizer.from_pretrained(path / "tokenizer")
-        full = AutoModelForCausalLM.from_pretrained(cfg["base"], revision=cfg.get("revision"), dtype=torch_dtype,
+        full = AutoModelForCausalLM.from_pretrained(cfg["base"], revision=cfg.get("revision"), torch_dtype=torch_dtype,
                                                     attn_implementation=attn)
         backbone = extract_backbone(full)
         del full
