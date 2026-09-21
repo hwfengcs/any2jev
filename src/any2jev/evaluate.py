@@ -27,22 +27,22 @@ def metrics_by_type(logits, labels, qtypes, temperature: float) -> dict:
 
 @torch.no_grad()
 def permutation_sensitivity(model: DecisionModel, records: list[Record], n_perm: int = 4, max_records: int = 50,
-                            seed: int = 0) -> dict:
-    """Re-ask each Choice question (>= 3 options) under ``n_perm`` option orders. Reports how often the
+                            seed: int = 0, temperature: float | None = None) -> dict:
+    """Re-ask each Choice question (>= 2 options) under ``n_perm`` option orders. Reports how often the
     argmax survives reordering and the mean/max spread of any option's probability across orders."""
     rng = random.Random(seed)
     stable, spreads, n = 0, [], 0
     for rec in records[:max_records]:
         state, specs = materialize(rec)
         for spec in specs:
-            if spec.qtype != "choice" or spec.n_options < 3:
+            if spec.qtype != "choice" or spec.n_options < 2:
                 continue
             runs = []
             for i in range(n_perm):
                 perm = list(range(spec.n_options))
                 if i:
                     rng.shuffle(perm)
-                p = model.probs([model.encode(state, [spec.permuted(perm)])])[0][0].numpy()
+                p = model.probs([model.encode(state, [spec.permuted(perm)])], temperature=temperature)[0][0].numpy()
                 orig = np.zeros(spec.n_options)
                 for pos, j in enumerate(perm):
                     orig[j] = p[pos]
@@ -58,7 +58,8 @@ def permutation_sensitivity(model: DecisionModel, records: list[Record], n_perm:
 
 
 @torch.no_grad()
-def isolation_check(model: DecisionModel, records: list[Record], max_records: int = 20) -> dict:
+def isolation_check(model: DecisionModel, records: list[Record], max_records: int = 20,
+                    temperature: float | None = None) -> dict:
     """Packed answers must equal answers obtained by asking each question alone (question isolation)."""
     worst = 0.0
     n = 0
@@ -66,16 +67,20 @@ def isolation_check(model: DecisionModel, records: list[Record], max_records: in
         state, specs = materialize(rec)
         if len(specs) < 2:
             continue
-        packed = model.probs([model.encode(state, specs)])[0]
+        packed = model.probs([model.encode(state, specs)], temperature=temperature)[0]
         for spec, p in zip(specs, packed):
-            alone = model.probs([model.encode(state, [spec])])[0][0]
+            alone = model.probs([model.encode(state, [spec])], temperature=temperature)[0][0]
             worst = max(worst, float((alone - p).abs().max()))
         n += 1
-    return {"n": n, "max_abs_prob_diff": worst}
+    return {"n": n, "max_abs_prob_diff": worst if n else None}
 
 
 def evaluate(model: DecisionModel, records: list[Record], *, batch_size: int = 8, n_perm: int = 4,
              perm_records: int = 50, isolation_records: int = 20, temperature: float | None = None) -> dict:
+    if not records:
+        raise ValueError("evaluation data is empty")
+    if batch_size < 1:
+        raise ValueError("batch_size must be positive")
     t = model.temperature if temperature is None else temperature
     logits, labels, qtypes = collect_logits(model, records, batch_size)
     report = {"n_records": len(records), "n_questions": len(labels), "temperature": t,
@@ -83,9 +88,9 @@ def evaluate(model: DecisionModel, records: list[Record], *, batch_size: int = 8
     if t != 1.0:
         report["metrics_uncalibrated"] = metrics_by_type(logits, labels, qtypes, 1.0)
     if n_perm > 1:
-        report["permutation"] = permutation_sensitivity(model, records, n_perm, perm_records)
-    if isolation_records > 0 and model.mode == "packed":
-        report["isolation"] = isolation_check(model, records, isolation_records)
+        report["permutation"] = permutation_sensitivity(model, records, n_perm, perm_records, temperature=t)
+    if isolation_records > 0:
+        report["isolation"] = isolation_check(model, records, isolation_records, temperature=t)
     return report
 
 

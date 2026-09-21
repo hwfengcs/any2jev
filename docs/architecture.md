@@ -61,8 +61,11 @@ option list, options can interact ("none of the above" works). All three primiti
 | Choice | `"key: description"` per criterion | `choice = argmax`, `probabilities`, `confidence` |
 | Score | ordered level descriptions | `score = Σ i·p_i`, `legend`, `probabilities`, `confidence` |
 
-`confidence` uses TypeSafe's published statistics (Choice: `(p_max − 1/K)/(1 − 1/K)`; Score: one minus
-the expected distance from the modal level, normalised by the uniform distribution's).
+Choice `confidence` follows TypeSafe's [public demo](https://docs.typesafe.ai/confidence):
+`(p_max − 1/K)/(1 − 1/K)`. Score confidence is an approximation: one minus the expected distance
+from the modal level, normalised by the uniform distribution's distance from its center. The exact
+Jev Score formula is not public. Neither statistic is an estimated accuracy; calibration metrics
+use the selected option's probability, not this derived confidence field.
 
 ## 4. Training
 
@@ -78,9 +81,9 @@ Gradient accumulation averages over the actual number of questions in each optim
 the final partial batch of an epoch. Continuing from a checkpoint resets its old temperature to 1;
 use a validation split to calibrate the updated weights again.
 
-RLCD, TypeSafe's reinforcement-learning recipe, is unpublished. The supervised proper-scoring objective
-plus temperature scaling gets most of the calibration benefit for a fraction of the compute; an RL stage
-with an RLCR-style reward (`correct − (confidence − correct)²`) is on the roadmap.
+The detailed RLCD recipe is unpublished. This project uses supervised proper-scoring objectives and
+validation-set temperature scaling; its relative calibration or compute benefit versus RLCD has not
+been measured. An RL stage with an RLCR-style reward (`correct − (confidence − correct)²`) is on the roadmap.
 
 ## 5. Evaluation
 
@@ -89,7 +92,11 @@ adaptive bins), AURC (area under the risk-coverage curve) and coverage at 5% ris
 
 * an **option-order test** (each Choice question under several permutations: argmax stability and the
   largest probability spread), the failure mode Archer Hume measured on Jev itself;
-* an **isolation check** (packed answers vs. asking each question alone).
+* an **isolation check** (questions together vs. asking each alone, in packed and rows modes).
+
+Binary Choice questions participate in option shuffling and permutation evaluation too. Isolation
+requires multi-question records: when none occur in the checked subset, the report records `n: 0`
+and `max_abs_prob_diff: null`, and the CLI reports the check as skipped.
 
 Adaptive ECE retains constant-confidence samples in a single bin. Selective metrics accept all
 questions with the same confidence together: a probability threshold cannot separate tied samples.

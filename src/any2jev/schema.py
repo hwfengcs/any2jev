@@ -169,15 +169,14 @@ def to_specs(req: SystemOneRequest, labels: dict[str, Any] | None = None) -> lis
 
 
 def choice_confidence(p: list[float]) -> float:
-    """TypeSafe's published Choice statistic: how far the top option stands above uniform."""
+    """Choice statistic used in TypeSafe's public confidence demo; not an accuracy estimate."""
     k = len(p)
     return 1.0 if k == 1 else (max(p) - 1 / k) / (1 - 1 / k)
 
 
 def score_confidence(p: list[float]) -> float:
-    """TypeSafe's Score statistic as implemented in the official System One adapter: one minus the
-    expected absolute distance from the modal level, normalised by that distance for a uniform
-    distribution. Reproduces the documented example (levels [0.0, 0.95, 0.05] -> 0.92)."""
+    """Approximate Score confidence from distance to the modal level, normalised by the uniform
+    distribution's distance to its center. TypeSafe's exact Score formula is not published."""
     n = len(p)
     if n == 1:
         return 1.0

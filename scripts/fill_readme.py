@@ -103,7 +103,7 @@ def public_table(ev: dict, base: dict | None, gen: dict | None, lang: str) -> st
         m = ev["metrics"][g]
         if gen and g in gen["metrics"]:
             gm = gen["metrics"][g]
-            fail = f" ({gm['format_failure_rate']:.0%} " + ("格式错误" if z else "format failures") + ")"
+            fail = f" ({gm['format_failure_rate']:.1%} " + ("格式错误" if z else "format failures") + ")"
             rows.append(f"| {g} | {m['n']} | {names['gen']} | {gm['accuracy']:.3f}{fail} | — | — | — | — | — |")
         if base and g in base["metrics"]:
             rows.append(f"| {g} | {m['n']} | {names['zs']} | " + " | ".join(fmt(base["metrics"][g])) + " |")
@@ -114,9 +114,12 @@ def public_table(ev: dict, base: dict | None, gen: dict | None, lang: str) -> st
         p = ev["permutation"]
         extra.append(f"选项顺序测试（{p['n']} 个 Choice 问题）：argmax 在 {p['argmax_stable_rate']:.0%} 的问题上保持稳定，概率最大波动均值 {p['mean_max_spread']:.3f}。" if z else
                       f"Option-order test on {p['n']} Choice questions: argmax stable in {p['argmax_stable_rate']:.0%} of them, mean max probability spread {p['mean_max_spread']:.3f}.")
-    if "isolation" in ev:
+    if ev.get("isolation", {}).get("n"):
         extra.append(f"隔离检查：打包提问与单独提问的答案最大差异 {ev['isolation']['max_abs_prob_diff']:.1e}。" if z else
                       f"Isolation check: packed vs. separate answers differ by at most {ev['isolation']['max_abs_prob_diff']:.1e}.")
+    elif "isolation" in ev:
+        extra.append("隔离检查：未执行（检查范围内没有包含多个问题的记录）。" if z else
+                     "Isolation check: skipped (no multi-question records in the checked subset).")
     extra.append(f"验证集拟合的温度 T = {ev['temperature']:.2f}。测试集 {ev['n_records']} 条记录，{ev['n_questions']} 个问题。" if z else
                   f"Temperature fitted on validation: T = {ev['temperature']:.2f}. Test set: {ev['n_records']} records, {ev['n_questions']} questions.")
     return "\n".join(rows) + "\n\n" + "\n".join(extra)

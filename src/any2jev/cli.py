@@ -105,7 +105,10 @@ def eval_cmd(
         p = rep["permutation"]
         console.print(f"option-order test: argmax stable {p['argmax_stable_rate']:.0%}, mean max spread {p['mean_max_spread']:.3f}")
     if "isolation" in rep:
-        console.print(f"isolation check: max |packed - separate| = {rep['isolation']['max_abs_prob_diff']:.2e}")
+        if rep["isolation"]["n"]:
+            console.print(f"isolation check: max |together - separate| = {rep['isolation']['max_abs_prob_diff']:.2e}")
+        else:
+            console.print("isolation check: skipped (no records with multiple questions in the checked subset)")
 
 
 @app.command()

@@ -78,7 +78,7 @@ def _model_card(model_dir: Path, repo_id: str) -> str:
         if ev.get("permutation", {}).get("n"):
             p = ev["permutation"]
             lines.append(f"\nOption-order test: argmax stable in {p['argmax_stable_rate']:.0%} of {p['n']} Choice questions.")
-        if "isolation" in ev:
+        if ev.get("isolation", {}).get("n"):
             lines.append(f"Isolation check (packed vs separate questions): max |dp| = {ev['isolation']['max_abs_prob_diff']:.1e}.")
         lines.append("")
     lines += ["## Limitations", "",

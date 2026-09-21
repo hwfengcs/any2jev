@@ -62,10 +62,10 @@ def materialize(rec: Record) -> tuple[str, list[QuestionSpec]]:
 
 
 def shuffle_choices(specs: list[QuestionSpec], rng: random.Random) -> list[QuestionSpec]:
-    """Permute the options of every Choice question with >= 3 options (order-robustness augmentation)."""
+    """Permute the options of every Choice question with >= 2 options (order-robustness augmentation)."""
     out = []
     for s in specs:
-        if s.qtype == "choice" and s.n_options >= 3:
+        if s.qtype == "choice" and s.n_options >= 2:
             perm = list(range(s.n_options))
             rng.shuffle(perm)
             out.append(s.permuted(perm))

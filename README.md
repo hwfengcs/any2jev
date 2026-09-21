@@ -62,7 +62,7 @@ carries no numbers; the script to fill it is included.
 
 ```
                  ┌─────────────────────── one forward pass ───────────────────────┐
-  state ────────►│ <state> …  │ <q> which team? <opt>billing</opt><opt>shipping</opt> <decide> │──► {billing: 0.91, shipping: 0.09}, confidence 0.86
+  state ────────►│ <state> …  │ <q> which team? <opt>billing</opt><opt>shipping</opt> <decide> │──► {billing: 0.91, shipping: 0.09}, confidence 0.82
                  │            │ <q> urgent?     <opt>no</opt><opt>yes</opt>          <decide> │──► noul 0.97
                  │            │ <q> how angry?  <opt>calm</opt> … <opt>furious</opt> <decide> │──► score 1.4, {0: .05, 1: .5, 2: .45}
                  └─────────────── questions see the state, never each other ─────────────────┘
@@ -176,25 +176,25 @@ writes them here. [docs/benchmarks.md](docs/benchmarks.md) lists which script pr
 <!-- RESULTS:PUBLIC -->
 | question type | n | system | acc | NLL | Brier | ECE | AURC | cov@5% |
 |---|---|---|---|---|---|---|---|---|
-| overall | 1000 | prompted for JSON (generate) | 0.621 (0% format failures) | — | — | — | — | — |
+| overall | 1000 | prompted for JSON (generate) | 0.621 (0.1% format failures) | — | — | — | — | — |
 | overall | 1000 | zero-shot logits (base) | 0.531 | 1.180 | 0.595 | 0.111 | 0.276 | 0.05 |
 | overall | 1000 | zero-shot + temperature | 0.531 | 1.125 | 0.579 | 0.058 | 0.279 | 0.05 |
 | overall | 1000 | **any2jev** | **0.796** | **0.506** | **0.284** | **0.027** | **0.062** | **0.57** |
-| noul | 250 | prompted for JSON (generate) | 0.624 (0% format failures) | — | — | — | — | — |
+| noul | 250 | prompted for JSON (generate) | 0.624 (0.0% format failures) | — | — | — | — | — |
 | noul | 250 | zero-shot logits (base) | 0.644 | 0.693 | 0.479 | 0.166 | 0.216 | 0.12 |
 | noul | 250 | zero-shot + temperature | 0.644 | 0.631 | 0.443 | 0.119 | 0.216 | 0.12 |
 | noul | 250 | **any2jev** | **0.844** | **0.386** | **0.242** | **0.090** | **0.058** | **0.58** |
-| choice | 500 | prompted for JSON (generate) | 0.764 (0% format failures) | — | — | — | — | — |
+| choice | 500 | prompted for JSON (generate) | 0.764 (0.2% format failures) | — | — | — | — | — |
 | choice | 500 | zero-shot logits (base) | 0.622 | 1.163 | 0.534 | 0.082 | 0.222 | 0.09 |
 | choice | 500 | zero-shot + temperature | 0.622 | 1.118 | 0.532 | 0.087 | 0.226 | 0.09 |
 | choice | 500 | **any2jev** | **0.906** | **0.272** | **0.142** | **0.020** | **0.018** | **0.88** |
-| score | 250 | prompted for JSON (generate) | 0.332 (0% format failures) | — | — | — | — | — |
+| score | 250 | prompted for JSON (generate) | 0.332 (0.0% format failures) | — | — | — | — | — |
 | score | 250 | zero-shot logits (base) | 0.236 | 1.700 | 0.835 | 0.145 | 0.710 | 0.00 |
 | score | 250 | zero-shot + temperature | 0.236 | 1.634 | 0.811 | 0.092 | 0.705 | 0.00 |
 | score | 250 | **any2jev** | **0.528** | **1.093** | **0.611** | **0.056** | **0.424** | **0.01** |
 
 Option-order test on 23 Choice questions: argmax stable in 96% of them, mean max probability spread 0.088.
-Isolation check: packed vs. separate answers differ by at most 0.0e+00.
+Isolation check: skipped (no multi-question records in the checked subset).
 Temperature fitted on validation: T = 1.61. Test set: 1000 records, 1000 questions.
 <!-- /RESULTS:PUBLIC -->
 
@@ -246,8 +246,8 @@ See [docs/architecture.md](docs/architecture.md). In short:
 3. State + questions are packed into one sequence under a **block-causal mask**; branch positions restart after
    the state. Hybrid (linear-attention) backbones fall back to one causal row per question.
 4. A **pointer head** scores `h(</opt>_k) · h(<decide>)`; softmax with a fitted temperature.
-5. Noul, Choice and Score are the same primitive with different option lists; `confidence` uses TypeSafe's
-   published formulas.
+5. Noul, Choice and Score are the same primitive with different option lists. Choice `confidence` follows
+   TypeSafe's public demo; Score confidence is an approximation ([details](docs/architecture.md)).
 
 ## Roadmap
 
