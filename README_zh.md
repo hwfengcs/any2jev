@@ -10,7 +10,7 @@
 
 <br/>
 
-[![CI](https://img.shields.io/github/actions/workflow/status/any2jev/any2jev/ci.yml?branch=main&label=ci&style=flat-square)](https://github.com/any2jev/any2jev/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/hwfengcs/any2jev/ci.yml?branch=main&label=ci&style=flat-square)](https://github.com/hwfengcs/any2jev/actions)
 [![PyPI](https://img.shields.io/pypi/v/any2jev?style=flat-square&color=blue)](https://pypi.org/project/any2jev/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green?style=flat-square)](LICENSE)
@@ -20,7 +20,7 @@
 
 <br/>
 
-<img src="docs/vs.gif" alt="同一套权重：提示输出 JSON vs any2jev 单次前向" width="100%">
+<img src="https://raw.githubusercontent.com/hwfengcs/any2jev/main/docs/vs.gif" alt="同一套权重：提示输出 JSON vs any2jev 单次前向" width="100%">
 
 <sub>同一套 <b>Qwen3-0.6B</b> 权重 · 同一张 RTX 2060 SUPER · 同一个请求。左：提示它输出 JSON，逐 token 解码。
 右：经过 <code>any2jev train</code> 之后。真实计时，以 1/4 速度回放（<code>examples/record_vs.py</code>）。</sub>
@@ -81,11 +81,33 @@ Jev 不开放权重。**any2jev 就是那个转换器**：任意 Hugging Face �
 问一个 Choice 问题。全程不生成文本。
 
 <!-- RESULTS:SNAKE -->
-![any2jev playing Snake](docs/snake.gif)
+![any2jev playing Snake](https://raw.githubusercontent.com/hwfengcs/any2jev/main/docs/snake.gif)
 
 held-out 老师走法：准确率 0.953，ECE 0.034，400 次决策。
 录制对局：final score 21 in 161 steps | median latency 41 ms
 <!-- /RESULTS:SNAKE -->
+
+## 60 秒试用，不用训练
+
+预训练 adapter 已经放在 Hugging Face Hub 上。任何能接 checkpoint 路径的地方都能接 `hf://`：
+
+```bash
+pip install "any2jev[serve]"
+any2jev ask hf://huaweifeng/any2jev-qwen3-0.6b \
+    --state "My payouts have failed 3 days in a row, the bank says everything is fine. Fix this ASAP." \
+    --choice "Which team should handle this? | billing, technical, sales" \
+    --noul "Does this need urgent human attention?" \
+    --score "How frustrated is the customer? | calm, frustrated, furious"
+any2jev serve hf://huaweifeng/any2jev-qwen3-0.6b --port 8009
+```
+
+| checkpoint | 基座 | 训练数据 | held-out | 说明 |
+|---|---|---|---|---|
+| [`huaweifeng/any2jev-qwen3-0.6b`](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b) | Qwen3-0.6B | boolq、ag_news、banking77、sst5（5400 条） | acc 0.796 · ECE 0.027 | 本页所有数字背后的模型 |
+| [`huaweifeng/any2jev-qwen3-0.6b-snake`](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b-snake) | Qwen3-0.6B | 4000 步 BFS 老师走法 | acc 0.953 | 驱动 `examples/snake.py` |
+
+每个仓库约 40 MB（LoRA adapter + pointer head + tokenizer + 配置）；基座权重首次使用时从它自己的 Hub 仓库下载。
+训练数据是英文的，中文输入请用自己的数据重新训练。
 
 ## 快速开始
 
@@ -219,7 +241,8 @@ RTX 2060 SUPER（Turing）没有原生 bf16，所以 fp32 反而更快；Ampere 
 - [ ] 服务端 state 前缀 KV 缓存（块因果 mask 保证精确）
 - [ ] 大模型走 vLLM / SGLang 后端，小模型导出 ONNX
 - [ ] 通过同一接口支持 encoder 基座（ModernBERT）
-- [ ] 在 Hub 上发布 Qwen3 0.6B / 1.7B / 4B 的预训练 adapter
+- [x] 在 Hub 上发布 Qwen3 0.6B 的预训练 adapter（[公开数据](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b)、[贪吃蛇](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b-snake)）
+- [ ] Qwen3 1.7B / 4B 以及 Llama / Gemma 基座的 adapter
 
 ## 致谢
 

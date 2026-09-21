@@ -26,3 +26,9 @@ dist/
 docs/*.gif
 !docs/snake.gif
 !docs/vs.gif
+
+# local secrets, never commit
+huggingface_key.txt
+PyPI-Recovery-Codes-*.txt
+*token*.txt
+*.key

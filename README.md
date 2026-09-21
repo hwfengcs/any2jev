@@ -10,7 +10,7 @@
 
 <br/>
 
-[![CI](https://img.shields.io/github/actions/workflow/status/any2jev/any2jev/ci.yml?branch=main&label=ci&style=flat-square)](https://github.com/any2jev/any2jev/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/hwfengcs/any2jev/ci.yml?branch=main&label=ci&style=flat-square)](https://github.com/hwfengcs/any2jev/actions)
 [![PyPI](https://img.shields.io/pypi/v/any2jev?style=flat-square&color=blue)](https://pypi.org/project/any2jev/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green?style=flat-square)](LICENSE)
@@ -20,7 +20,7 @@
 
 <br/>
 
-<img src="docs/vs.gif" alt="Same weights: prompted for JSON vs any2jev, one forward pass" width="100%">
+<img src="https://raw.githubusercontent.com/hwfengcs/any2jev/main/docs/vs.gif" alt="Same weights: prompted for JSON vs any2jev, one forward pass" width="100%">
 
 <sub>Same <b>Qwen3-0.6B</b> weights · same RTX 2060 SUPER · same request. Left: prompted for JSON, decoded token by token.
 Right: after <code>any2jev train</code>. Real timings, replayed at ¼ speed (<code>examples/record_vs.py</code>).</sub>
@@ -82,11 +82,33 @@ carries no numbers; the script to fill it is included.
 and the game loop asks one Choice question per tick over the legal moves. No text is generated.
 
 <!-- RESULTS:SNAKE -->
-![any2jev playing Snake](docs/snake.gif)
+![any2jev playing Snake](https://raw.githubusercontent.com/hwfengcs/any2jev/main/docs/snake.gif)
 
 Held-out teacher moves: accuracy 0.953, ECE 0.034, 400 decisions.
 Recorded game: final score 21 in 161 steps | median latency 41 ms
 <!-- /RESULTS:SNAKE -->
+
+## Try it in 60 seconds, no training
+
+Pretrained adapters are on the Hugging Face Hub. `hf://` works anywhere a checkpoint path does:
+
+```bash
+pip install "any2jev[serve]"
+any2jev ask hf://huaweifeng/any2jev-qwen3-0.6b \
+    --state "My payouts have failed 3 days in a row, the bank says everything is fine. Fix this ASAP." \
+    --choice "Which team should handle this? | billing, technical, sales" \
+    --noul "Does this need urgent human attention?" \
+    --score "How frustrated is the customer? | calm, frustrated, furious"
+any2jev serve hf://huaweifeng/any2jev-qwen3-0.6b --port 8009
+```
+
+| checkpoint | base | trained on | held-out | notes |
+|---|---|---|---|---|
+| [`huaweifeng/any2jev-qwen3-0.6b`](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b) | Qwen3-0.6B | boolq, ag_news, banking77, sst5 (5.4k records) | acc 0.796 · ECE 0.027 | the model behind every number on this page |
+| [`huaweifeng/any2jev-qwen3-0.6b-snake`](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b-snake) | Qwen3-0.6B | 4k BFS-teacher Snake moves | acc 0.953 | drives `examples/snake.py` |
+
+Each repo is ~40 MB (LoRA adapter + pointer head + tokenizer + config); the base weights download from
+their own Hub repo on first use.
 
 ## Quick start
 
@@ -225,7 +247,8 @@ See [docs/architecture.md](docs/architecture.md). In short:
 - [ ] State-prefix KV cache in the server (exact, thanks to the block-causal mask)
 - [ ] vLLM / SGLang backend for large bases; ONNX export for the small ones
 - [ ] Encoder backbones (ModernBERT) through the same interface
-- [ ] Pretrained adapters on the Hub for Qwen3 0.6B / 1.7B / 4B
+- [x] Pretrained adapters on the Hub for Qwen3 0.6B ([public data](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b), [Snake](https://huggingface.co/huaweifeng/any2jev-qwen3-0.6b-snake))
+- [ ] Adapters for Qwen3 1.7B / 4B and a Llama / Gemma base
 
 ## Related work
 

@@ -6,7 +6,7 @@ must be backed by a command in this repo that reproduces it.
 ## Dev setup
 
 ```bash
-git clone https://github.com/any2jev/any2jev && cd any2jev
+git clone https://github.com/hwfengcs/any2jev && cd any2jev
 pip install -e ".[dev,compat]"
 pytest -q          # ~1 minute on CPU: a 2-layer random Qwen3 stands in for a real base
 ruff check src tests examples scripts

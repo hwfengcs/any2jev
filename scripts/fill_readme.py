@@ -132,7 +132,7 @@ def latency_table(lat: list[dict], lang: str) -> str:
 
 
 def snake_block(sn: dict | None, play: str | None, lang: str) -> str:
-    parts = ["![any2jev playing Snake](docs/snake.gif)", ""]
+    parts = ["![any2jev playing Snake](https://raw.githubusercontent.com/hwfengcs/any2jev/main/docs/snake.gif)", ""]
     if sn and "metrics" in sn:
         m = sn["metrics"]["overall"]
         parts.append(f"held-out 老师走法：准确率 {m['accuracy']:.3f}，ECE {m['ece']:.3f}，{m['n']} 次决策。" if lang == "zh" else

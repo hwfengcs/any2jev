@@ -1,0 +1,40 @@
+name: publish
+
+# Publishes the package to PyPI when a GitHub release is published (or on manual dispatch).
+# Uses PyPI trusted publishing (OIDC): register this repo + workflow as a publisher at
+# https://pypi.org/manage/account/publishing/ (project: any2jev, owner: hwfengcs, repo: any2jev,
+# workflow: publish.yml, environment: pypi). No API token is stored in GitHub.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade build twine
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
