@@ -1,6 +1,16 @@
 import numpy as np
+import pytest
 
-from any2jev.calibration import aurc, brier, coverage_at_risk, ece, fit_temperature, softmax, summarize
+from any2jev.calibration import (
+    aurc,
+    brier,
+    coverage_at_risk,
+    ece,
+    fit_temperature,
+    reliability_bins,
+    softmax,
+    summarize,
+)
 
 
 def _sample(n=4000, k=4, scale=2.0, seed=0):
@@ -25,6 +35,20 @@ def test_ece_extremes():
     assert ece(conf, np.array([0.0] * 100)) > 0.85
 
 
+@pytest.mark.parametrize("confidence", [0.0, 0.9, 1.0])
+def test_adaptive_ece_keeps_constant_confidence_samples(confidence):
+    conf = np.full(10, confidence)
+    correct = np.zeros(10)
+    bins = reliability_bins(conf, correct, adaptive=True)
+    assert sum(row["n"] for row in bins) == 10
+    assert ece(conf, correct, adaptive=True) == pytest.approx(confidence)
+
+
+def test_reliability_bins_empty():
+    assert reliability_bins(np.array([]), np.array([]), adaptive=True) == []
+    assert ece(np.array([]), np.array([]), adaptive=True) == 0.0
+
+
 def test_brier_bounds():
     probs = np.array([[1.0, 0.0], [0.0, 1.0]])
     assert brier(probs, [0, 1]) == 0.0
@@ -37,6 +61,15 @@ def test_selective_metrics():
     assert coverage_at_risk(conf, correct, 0.0) == 0.5
     assert 0 < aurc(conf, correct) < 0.5
     assert aurc(conf, np.array([0, 0, 1, 1])) > aurc(conf, correct)
+
+
+def test_selective_metrics_do_not_split_confidence_ties():
+    # A probability threshold cannot accept just the correct member of a tie.
+    conf = np.array([0.9, 0.9, 0.5])
+    for correct in (np.array([1, 0, 1]), np.array([0, 1, 1])):
+        assert coverage_at_risk(conf, correct, 0.05) == 0.0
+        assert coverage_at_risk(conf, correct, 0.4) == 1.0
+        assert aurc(conf, correct) == pytest.approx((2 * 0.5 + 1 / 3) / 3)
 
 
 def test_summarize_keys_and_variable_k():

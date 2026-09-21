@@ -87,6 +87,11 @@ adaptive bins), AURC (area under the risk-coverage curve) and coverage at 5% ris
   largest probability spread), the failure mode Archer Hume measured on Jev itself;
 * an **isolation check** (packed answers vs. asking each question alone).
 
+Adaptive ECE retains constant-confidence samples in a single bin. Selective metrics accept all
+questions with the same confidence together: a probability threshold cannot separate tied samples.
+AURC uses the right-step area at these attainable thresholds, and coverage at 5% risk chooses the
+largest qualifying threshold set. Neither metric depends on the input order of tied predictions.
+
 ## 6. Serving
 
 `any2jev serve` exposes `POST /v1/systemone` and `GET /v1/models` with TypeSafe's exact request and

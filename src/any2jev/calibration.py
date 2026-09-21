@@ -36,7 +36,7 @@ def nll(logits: Sequence[np.ndarray], labels: Sequence[int], t: float = 1.0) -> 
 
 def fit_temperature(logits: Sequence[np.ndarray], labels: Sequence[int], lo: float = 0.05, hi: float = 20.0,
                     iters: int = 80) -> float:
-    """Scalar temperature minimising NLL (golden-section search over log T; NLL is convex in log T)."""
+    """Scalar temperature minimising NLL (unimodal in log T, convex in inverse temperature)."""
     if len(logits) == 0:
         return 1.0
     a, b = np.log(lo), np.log(hi)
@@ -62,8 +62,12 @@ def top_label(probs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 def reliability_bins(conf: np.ndarray, correct: np.ndarray, n_bins: int = 10, adaptive: bool = False) -> list[dict]:
     conf, correct = np.asarray(conf, np.float64), np.asarray(correct, np.float64)
+    if not len(conf):
+        return []
     if adaptive:
         edges = np.unique(np.quantile(conf, np.linspace(0, 1, n_bins + 1)))
+        if len(edges) == 1:
+            edges = np.array([0.0, 1.0])
         edges[0], edges[-1] = 0.0, 1.0
     else:
         edges = np.linspace(0.0, 1.0, n_bins + 1)
@@ -90,21 +94,31 @@ def brier(probs: np.ndarray, labels: Sequence[int]) -> float:
     return float(((p - onehot) ** 2).sum(axis=1).mean())
 
 
-def aurc(conf: np.ndarray, correct: np.ndarray) -> float:
-    """Area under the risk-coverage curve when abstaining on the least confident questions first."""
+def _risk_curve(conf: np.ndarray, correct: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Accepted counts and risks at attainable thresholds, accepting confidence ties together."""
+    conf = np.asarray(conf, np.float64)
     order = np.argsort(-conf, kind="stable")
     err = 1.0 - np.asarray(correct, np.float64)[order]
-    risk = np.cumsum(err) / np.arange(1, len(err) + 1)
-    return float(risk.mean())
+    ends = np.flatnonzero(np.r_[conf[order][1:] != conf[order][:-1], True])
+    counts = ends + 1
+    return counts, np.cumsum(err)[ends] / counts
+
+
+def aurc(conf: np.ndarray, correct: np.ndarray) -> float:
+    """Right-step area under the threshold risk-coverage curve; equal confidences stay together."""
+    if not len(conf):
+        return 0.0
+    counts, risk = _risk_curve(conf, correct)
+    return float(np.dot(np.diff(np.r_[0, counts]), risk) / len(conf))
 
 
 def coverage_at_risk(conf: np.ndarray, correct: np.ndarray, max_risk: float) -> float:
     """Fraction of questions that can be auto-decided while keeping error rate <= max_risk."""
-    order = np.argsort(-conf, kind="stable")
-    err = 1.0 - np.asarray(correct, np.float64)[order]
-    risk = np.cumsum(err) / np.arange(1, len(err) + 1)
+    if not len(conf):
+        return 0.0
+    counts, risk = _risk_curve(conf, correct)
     ok = np.where(risk <= max_risk)[0]
-    return float((ok[-1] + 1) / len(err)) if len(ok) else 0.0
+    return float(counts[ok[-1]] / len(conf)) if len(ok) else 0.0
 
 
 def summarize(logits: Sequence[np.ndarray], labels: Sequence[int], t: float = 1.0, n_bins: int = 10) -> dict:
