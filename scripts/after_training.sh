@@ -13,6 +13,13 @@ log "zero-shot baseline"
 python examples/baseline_zeroshot.py Qwen/Qwen3-0.6B --data data/public/test.jsonl --val data/public/val.jsonl \
   --val-n 200 --out runs/qwen3-0.6b-public/baseline_zeroshot.json >> "$LOG" 2>&1 || log "baseline FAILED"
 
+log "prompted-JSON baseline (generate)"
+python examples/baseline_generate_json.py Qwen/Qwen3-0.6B --data data/public/test.jsonl   --out runs/qwen3-0.6b-public/baseline_generate_json.json >> "$LOG" 2>&1 || log "generate baseline FAILED"
+
+log "split-screen recording + GIF"
+python examples/record_vs.py --base Qwen/Qwen3-0.6B --checkpoint runs/qwen3-0.6b-public >> "$LOG" 2>&1 || log "record_vs FAILED"
+python examples/render_vs.py --recording runs/vs_recording.json --out docs/vs.gif --slow 4 >> "$LOG" 2>&1 || log "render_vs FAILED"
+
 log "latency"
 python - >> "$LOG" 2>&1 <<'PY' || log "latency FAILED"
 import json, subprocess, sys
@@ -37,6 +44,9 @@ tail -2 runs/snake/play.log | tee -a "$LOG"
 
 log "fill README"
 python scripts/fill_readme.py --eval runs/qwen3-0.6b-public/eval.json \
-  --baseline runs/qwen3-0.6b-public/baseline_zeroshot.json --latency runs/latency.json \
-  --snake-eval runs/snake/eval.json --snake-play runs/snake/play.log >> "$LOG" 2>&1 || log "fill_readme FAILED"
+  --baseline runs/qwen3-0.6b-public/baseline_zeroshot.json \
+  --generate runs/qwen3-0.6b-public/baseline_generate_json.json \
+  --vs runs/vs_recording.json --latency runs/latency.json \
+  --snake-eval runs/snake/eval.json --snake-play runs/snake/play.log \
+  --bases runs/qwen3-0.6b-public runs/qwen3.5-0.8b-synthetic >> "$LOG" 2>&1 || log "fill_readme FAILED"
 log "PIPELINE DONE"

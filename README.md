@@ -145,7 +145,7 @@ Your own data is one JSON object per line, exactly a `/v1/systemone` request plu
 
 Qwen3-0.6B, LoRA r=16, one epoch, one RTX 2060 SUPER (8 GB). Held-out test splits, temperature fitted on
 validation. `any2jev eval` prints these tables; the JSON reports live in `runs/` and `scripts/fill_readme.py`
-writes them here.
+writes them here. [docs/benchmarks.md](docs/benchmarks.md) lists which script produced each number.
 
 ### Public data, per question type
 

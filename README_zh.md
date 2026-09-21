@@ -143,6 +143,7 @@ curl -s localhost:8009/v1/systemone -H 'content-type: application/json' -d @exam
 
 Qwen3-0.6B，LoRA r=16，1 个 epoch，一张 RTX 2060 SUPER（8 GB）。held-out 测试集，温度在验证集上拟合。
 `any2jev eval` 打印这些表；JSON 报告在 `runs/`，由 `scripts/fill_readme.py` 写到这里。
+[docs/benchmarks.md](docs/benchmarks.md) 列出了每个数字由哪个脚本产生。
 
 ### 公开数据，按问题类型
 
