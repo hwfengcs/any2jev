@@ -25,6 +25,11 @@ byte-identical to what the server feeds it, so there is no prompt drift between 
 | `type: choice` | `criteria`: map of option key to description (or `null`); 1–255 options; `label`: an option key. |
 | `type: score` | `criteria`: ordered list of level descriptions (2–255; Jev accepts up to 10); `label`: level index from 0. |
 
+Invalid labels fail validation with the JSONL filename and line number. Noul also accepts `0`/`1`
+and the strings `true`/`false`, `yes`/`no`, `1`/`0` (case-insensitive); other values are rejected.
+Score accepts integer indices or their string representation, and rejects fractional values and
+booleans instead of silently converting them to a different label.
+
 Tips that matter for the model:
 
 * Vary the phrasing of instructions and criteria, wrap the same state as a string sometimes and as a

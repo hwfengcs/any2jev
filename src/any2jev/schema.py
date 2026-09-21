@@ -119,15 +119,26 @@ def label_index(qtype: str, keys: list[str], label: Any) -> int:
         raise ValueError("label is required")
     if qtype == "noul":
         if isinstance(label, str):
-            label = label.strip().lower() in ("true", "yes", "1")
-        return int(bool(label))
+            value = label.strip().lower()
+            if value in ("true", "yes", "1"):
+                return 1
+            if value in ("false", "no", "0"):
+                return 0
+        elif isinstance(label, (bool, int, float)) and label in (0, 1):
+            return int(label)
+        raise ValueError(f"noul label {label!r} must be true/false or 0/1")
     if qtype == "choice":
         if isinstance(label, int) and not isinstance(label, bool) and 0 <= label < len(keys) and str(label) not in keys:
             return label
         if str(label) not in keys:
             raise ValueError(f"label {label!r} is not one of the choice keys {keys}")
         return keys.index(str(label))
-    idx = int(label)
+    try:
+        idx = int(label)
+    except (TypeError, ValueError, OverflowError) as e:
+        raise ValueError(f"score label {label!r} must be an integer level index") from e
+    if isinstance(label, bool) or (isinstance(label, float) and label != idx):
+        raise ValueError(f"score label {label!r} must be an integer level index")
     if not 0 <= idx < len(keys):
         raise ValueError(f"score label {label!r} outside 0..{len(keys) - 1}")
     return idx

@@ -57,6 +57,15 @@ class TrainConfig:
     save_every_epoch: bool = False
     extra: dict = field(default_factory=dict)
 
+    def __post_init__(self):
+        for name in ("batch_size", "grad_accum", "log_every", "max_state", "max_branch"):
+            if getattr(self, name) < 1:
+                raise ValueError(f"{name} must be positive")
+        if not math.isfinite(self.epochs) or self.epochs <= 0:
+            raise ValueError("epochs must be finite and positive")
+        if self.max_steps is not None and self.max_steps < 1:
+            raise ValueError("max_steps must be positive")
+
 
 def question_loss(z: torch.Tensor, y: int, qtype: str, brier_w: float, ordinal_w: float) -> torch.Tensor:
     k = z.shape[-1]
@@ -113,8 +122,14 @@ def train(cfg: TrainConfig, log=print) -> Path:
     torch.manual_seed(cfg.seed)
     rng = random.Random(cfg.seed)
     records = load_jsonl(cfg.data)
+    if not records:
+        raise ValueError(f"training data is empty: {cfg.data}")
     val = load_jsonl(cfg.val) if cfg.val else None
+    if cfg.val and not val:
+        raise ValueError(f"validation data is empty: {cfg.val}")
     model = load_or_create(cfg)
+    # A previous calibration no longer describes weights after further training.
+    model.temperature = 1.0
     n_params = model.count_parameters()
     log(f"model: {cfg.base} | mode={model.mode} | trainable {n_params['trainable']:,} / {n_params['total']:,} params")
     log(f"data: {len(records)} records" + (f", val {len(val)} records" if val else ""))
@@ -137,6 +152,7 @@ def train(cfg: TrainConfig, log=print) -> Path:
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lr_lambda)
     history = []
     step, micro, t0 = 0, 0, time.time()
+    accumulated_questions = 0
     run_loss, run_n, run_correct, run_q = 0.0, 0, 0, 0
     model.train()
     done = False
@@ -153,20 +169,28 @@ def train(cfg: TrainConfig, log=print) -> Path:
                     losses.append(question_loss(z, int(y), t, cfg.brier_weight, cfg.ordinal_weight))
                     run_correct += int(z.argmax().item() == y)
                     run_q += 1
-            loss = torch.stack(losses).mean()
+            loss_sum = torch.stack(losses).sum()
+            loss = loss_sum / len(losses)
             if not torch.isfinite(loss):
                 raise RuntimeError("non-finite training loss")
-            (loss / cfg.grad_accum).backward()
-            run_loss += loss.item() * len(batch)
-            run_n += len(batch)
+            # Sum first, then normalize by the actual question count in this optimizer step.
+            # Microbatches can have different record sizes and different numbers of questions.
+            loss_sum.backward()
+            accumulated_questions += len(losses)
+            run_loss += loss.item() * len(losses)
+            run_n += len(losses)
             micro += 1
-            if micro % cfg.grad_accum != 0:
+            if micro < cfg.grad_accum and i + cfg.batch_size < len(order):
                 continue
+            for p in model.trainable_parameters():
+                if p.grad is not None:
+                    p.grad.div_(accumulated_questions)
             if cfg.max_grad_norm:
                 torch.nn.utils.clip_grad_norm_(model.trainable_parameters(), cfg.max_grad_norm)
             opt.step()
             sched.step()
             opt.zero_grad(set_to_none=True)
+            micro, accumulated_questions = 0, 0
             step += 1
             if step % cfg.log_every == 0 or step == total_steps:
                 rec = {"step": step, "epoch": round(step / steps_per_epoch, 3), "loss": run_loss / max(run_n, 1),

@@ -81,6 +81,18 @@ def test_label_index_forms():
         label_index("score", ["0", "1"], 5)
 
 
+@pytest.mark.parametrize("label", ["maybe", "", 2, -1, 0.5, [], {}])
+def test_invalid_noul_labels_rejected(label):
+    with pytest.raises(ValueError, match="noul label"):
+        label_index("noul", ["false", "true"], label)
+
+
+@pytest.mark.parametrize("label", [0.5, 1.9, True, [], {}, float("inf")])
+def test_non_integer_score_labels_rejected(label):
+    with pytest.raises(ValueError, match="score label"):
+        label_index("score", ["0", "1", "2"], label)
+
+
 def test_permuted_spec_keeps_label_key():
     spec = to_specs(SystemOneRequest.model_validate(DOC_REQUEST), {"dept": "technical"})[1]
     perm = [2, 0, 1]

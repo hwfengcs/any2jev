@@ -74,6 +74,10 @@ the expected distance from the modal level, normalised by the uniform distributi
 * After training, a scalar temperature is fitted on the validation set by minimising NLL
   (golden-section search). It is stored in the checkpoint and applied at inference.
 
+Gradient accumulation averages over the actual number of questions in each optimizer step, including
+the final partial batch of an epoch. Continuing from a checkpoint resets its old temperature to 1;
+use a validation split to calibrate the updated weights again.
+
 RLCD, TypeSafe's reinforcement-learning recipe, is unpublished. The supervised proper-scoring objective
 plus temperature scaling gets most of the calibration benefit for a fraction of the compute; an RL stage
 with an RLCR-style reward (`correct − (confidence − correct)²`) is on the roadmap.
