@@ -1,0 +1,31 @@
+{
+  "state": {
+    "ticket": {
+      "channel": "email",
+      "body": "Hi, my payouts have been failing for 3 days and the bank says everything is fine on their side. I'm losing sales every hour this goes on. Please fix this ASAP."
+    },
+    "customer_tier": "pro"
+  },
+  "questions": {
+    "department": {
+      "type": "choice",
+      "instructions": "Which team should handle this ticket?",
+      "criteria": {
+        "billing": "Payments, payouts, invoicing, refunds",
+        "technical": "Bugs, outages, integrations",
+        "sales": "Pricing, upgrades, new accounts",
+        "other": "None of the above"
+      }
+    },
+    "urgent": {
+      "type": "noul",
+      "instructions": "Does this message require urgent human attention?",
+      "criteria": {"true": "Explicitly time-sensitive or losing money", "false": "No urgency expressed"}
+    },
+    "frustration": {
+      "type": "score",
+      "instructions": "How frustrated is the customer?",
+      "criteria": ["Calm", "Frustrated", "Very angry"]
+    }
+  }
+}
